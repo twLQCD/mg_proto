@@ -22,4 +22,16 @@ namespace MG {
                              MGLevelCoarseEO &coarse_level) {
         SetupCoarseToCoarseT<>(p, *M_fine, fine_level_id, fine_level, coarse_level);
     }
+
+    void ModifyCoarseOp(MGLevelCoarse &coarse_level) {
+	
+	ModifyCoarseOpT<>(coarse_level);
+   
+    }
+
+    void ModifyCoarseOp(MGLevelCoarseEO &coarse_level) {
+
+	ModifyCoarseOpT<>(coarse_level);
+
+    }
 }
