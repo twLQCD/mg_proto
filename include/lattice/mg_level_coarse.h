@@ -130,6 +130,12 @@ namespace MG {
             CoarseDiracOp::write(*(coarse_level.gauge), filename);
         }
     }
+
+    template <typename CoarseLevelT>
+    void ModifyCoarseOpT(CoarseLevelT &coarse_level)
+    {
+    coarse_level.M = std::make_shared<const typename CoarseLevelT::LinOp>(coarse_level.gauge);
+    }
     // These need to be moved into a .cc file. Right now they are with QDPXX (shriek!!!)
     void SetupCoarseToCoarse(const SetupParams &p,
                              std::shared_ptr<const CoarseWilsonCloverLinearOperator> M_fine,
@@ -140,6 +146,10 @@ namespace MG {
                              std::shared_ptr<const CoarseEOWilsonCloverLinearOperator> M_fine,
                              int fine_level_id, MGLevelCoarseEO &fine_level,
                              MGLevelCoarseEO &coarse_level);
+
+    void ModifyCoarseOp(MGLevelCoarse &coarse_level);
+
+    void ModifyCoarseOp(MGLevelCoarseEO &coarse_level);
 
 } // namespace MG
 
