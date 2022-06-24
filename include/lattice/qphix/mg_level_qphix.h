@@ -155,6 +155,13 @@ namespace MG {
         CreateBlockList(fine_level.blocklist, blocked_lattice_dims, blocked_lattice_orig, latdims,
                         p.block_sizes[0], fine_level.info->GetLatticeOrigin());
 
+	//at this point we have the fine level null vecs (or evecs). So here is where we do the LSVD
+	//and keep the singular vectors corresponding to the largest singular values of the blocks
+	if (p.n_vecs_keep[0] != 0){
+	MasterLog(INFO, "MG Level 0: Performing SVD on Local Blocks");
+	localSVD(fine_level.null_vecs, fine_level.blocklist, p.n_vecs_keep[0]);
+	}
+
         // Orthonormalize the vectors -- I heard once that for GS stability is improved
         // if you do it twice.
         MasterLog(INFO, "MG Level 0: Block Orthogonalizing Aggregates");
@@ -162,6 +169,10 @@ namespace MG {
         orthonormalizeBlockAggregates(fine_level.null_vecs, fine_level.blocklist);
 
         orthonormalizeBlockAggregates(fine_level.null_vecs, fine_level.blocklist);
+
+	//now have a different number of near null vectors (potentially) so change
+	//num_vecs to be equal to the number of near null vectors
+	num_vecs = fine_level.null_vecs.size();
 
         // Create the blocked Clover and Gauge Fields
         // This service needs the blocks, the vectors and is a convenience

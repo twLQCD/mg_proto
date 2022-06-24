@@ -102,11 +102,20 @@ namespace MG {
                         fine_level.info->GetLatticeDimensions(), p.block_sizes[fine_level_id],
                         fine_level.info->GetLatticeOrigin());
 
+	if (p.n_vecs_keep[fine_level_id] != 0){
+	MasterLog(INFO, "Performing SVD of Local Blocks on Level %d",fine_level_id);
+	localSVD(fine_level.null_vecs, fine_level.blocklist, p.n_vecs_keep[fine_level_id]);
+	}
+
         // Orthonormalize the vectors -- I heard once that for GS stability is improved
         // if you do it twice.
         orthonormalizeBlockAggregates(fine_level.null_vecs, fine_level.blocklist);
 
         orthonormalizeBlockAggregates(fine_level.null_vecs, fine_level.blocklist);
+
+	//now have a different number of near null vectors (potentially) so change
+	//num_vecs to be equal to the number of near null vectors
+	num_vecs = fine_level.null_vecs.size();
 
         // Create the blocked Clover and Gauge Fields
         // This service needs the blocks, the vectors and is a convenience

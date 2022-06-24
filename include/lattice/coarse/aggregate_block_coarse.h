@@ -47,6 +47,9 @@ namespace MG {
     void orthonormalizeBlockAggregates(std::vector<std::shared_ptr<CoarseSpinor>> &vecs,
                                        const std::vector<Block> &block_list);
 
+    void localSVD(std::vector<std::shared_ptr<CoarseSpinor>> &vecs,
+	          const std::vector<Block> &block_list, const int &k_c);
+
     //! 'Restrict' a QDP++ spinor to a CoarseSpinor with the same geometry
     void restrictSpinor(const std::vector<Block> &blocklist,
                         const std::vector<std::shared_ptr<CoarseSpinor>> &v,

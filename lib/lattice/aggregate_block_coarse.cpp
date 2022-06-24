@@ -17,6 +17,8 @@
 
 // Eigen Dense header
 #include <Eigen/Dense>
+//for local SVD
+#include <Eigen/SVD>
 using namespace Eigen;
 
 namespace MG {
@@ -260,6 +262,131 @@ namespace MG {
 
             } // block
         }     // aggregates
+    }
+
+    struct EigenDims_t {
+	int n;
+	int m;
+    };
+
+    EigenDims_t returnMatDims(const CoarseSpinor &src, const int &num_vecs){
+	
+	EigenDims_t dims;
+	dims.m = num_vecs;
+        const int num_color = src.GetNumColor();
+        const LatticeInfo &info = src.GetInfo();
+        const int n_per_chiral = (info.GetNumSpins() == 4) ? 2 * num_color : num_color;
+	dims.n = 2*n_per_chiral;
+
+	return dims;
+    }	 
+
+    void SpinorToEigen(const CoarseSpinor &src, Eigen::MatrixXcf &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx){
+
+	const int num_color = src.GetNumColor();
+	const LatticeInfo &info = src.GetInfo();
+	const int n_per_chiral = (info.GetNumSpins() == 4) ? 2 * num_color : num_color;
+
+	for (int site = 0; site < num_sites; ++site){
+
+	const CBSite &cbsite = block_sitelist[site];
+	const float *src_site_data = src.GetSiteDataPtr(0, cbsite.cb, cbsite.site);
+		for (int colorspin = 0; colorspin < 2*n_per_chiral; ++colorspin){
+
+		P(colorspin + 2*n_per_chiral*site, vec_idx) = std::complex<float>(src_site_data[RE + n_complex * colorspin], src_site_data[IM + n_complex * colorspin]);
+
+		} //colorspin
+	}
+	
+
+    }
+
+    void EigenToSpinor(CoarseSpinor &target, const Eigen::MatrixXcf &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx){
+
+      const int num_color = target.GetNumColor();
+      const LatticeInfo &info = target.GetInfo();
+      const int n_per_chiral = (info.GetNumSpins() == 4) ? 2 * num_color : num_color;
+
+      for (int site = 0; site < num_sites; ++site){
+      const CBSite &cbsite = block_sitelist[site];
+      float *target_site_data = target.GetSiteDataPtr(0, cbsite.cb, cbsite.site);
+
+           for (int colorspin = 0; colorspin < 2*n_per_chiral; ++colorspin){
+
+           target_site_data[RE + n_complex * colorspin] = P(colorspin + 2*n_per_chiral*site, vec_idx).real();
+           target_site_data[IM + n_complex * colorspin] = P(colorspin + 2*n_per_chiral*site, vec_idx).imag();
+
+           }
+
+           }
+
+    }
+
+    void localSVD(std::vector<std::shared_ptr<CoarseSpinor>> &vecs, const std::vector<Block> &block_list,
+		  const int &k_c){
+
+	int num_blocks = block_list.size();
+	for (int block_id = 0; block_id < num_blocks; block_id++){
+	
+	const Block &block = block_list[block_id];
+	std::vector<CBSite> block_sitelist = block.getCBSiteList();
+	int num_sites = block.getNumSites();
+	int num_vecs = vecs.size();
+
+	IndexType idx = 0;
+	//std::shared_ptr<CoarseSpinor> psi;
+	//CopyVec(*psi, vecs[idx]);
+        //const int num_color = *psi.GetNumColor();
+        //const LatticeInfo &info = *(vecs[idx]).GetInfo();
+	//const int n_per_chiral = (info.GetNumSpins() == 4) ? 2 * num_color : num_color;
+	EigenDims_t dims = returnMatDims(*(vecs[idx]), num_vecs);
+
+	Eigen::MatrixXcf P(dims.n, dims.m);
+
+		for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs); ++curr_vec){
+
+			//for (int site = 0; site < num_sites; ++site){
+
+			//const CBSite &cbsite = block_sitelist[site];
+			//const float *src_site_data = *(vecs[curr_vec]).GetSiteDataPtr(0, cbsite.cb, cbsite.site);
+			//for (int colorspin = 0; colorspin < 2*n_per_chiral; ++colorspin){
+
+			//P(colorspin + 2*n_per_chiral*site, curr_vec) = std::complex<float>(src_site_data[RE + n_complex * colorspin], src_site_data[IM + n_complex * colorspin]); 
+
+			//} //colorspin
+
+			//} //site
+		SpinorToEigen(*(vecs[curr_vec]), P, num_sites, block_sitelist, static_cast<int>(curr_vec));
+
+
+		} //curr_vec
+
+		//the vectors on the blocks now in P, so do the svd, only need U
+		Eigen::JacobiSVD<Eigen::MatrixXcf> svd(P, ComputeThinU);
+		//overwrite P with U
+		P = svd.matrixU();
+
+		//now place them back in the vectors, keeping the ones corresponding to the largest singular values of the block. 
+		//The singular vectors U_i are sorted largest to smallest already in Eigen
+		vecs.resize(k_c);
+		for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(k_c); curr_vec++){
+
+			//for (int site = 0; site < num_sites; ++site){
+			//const CBSite &cbsite = block_sitelist[site];
+			//float *src_site_data = *(vecs[curr_vec]).GetSiteDataPtr(0, cbsite.cb, cbsite.site);
+			
+			//for (int colorspin = 0; colorspin < 2*n_per_chiral; ++colorspin){
+
+			//src_site_data[RE + n_complex * colorspin] = P(colorspin + 2*n_per_chiral*site, curr_vec).real();
+			//src_site_data[IM + n_complex * colorspin] = P(colorspin + 2*n_per_chiral*site, curr_vec).imag();
+			EigenToSpinor(*(vecs[curr_vec]), P, num_sites, block_sitelist, static_cast<int>(curr_vec));
+			}
+
+			//} //site		
+		//} //curr_vec
+
+	} //block_id
+
     }
 
     //! 'Restrict' a QDP++ spinor to a CoarseSpinor with the same geometry

@@ -15,6 +15,9 @@
 #include <lattice/qphix/qphix_blas_wrappers.h>
 #include <omp.h>
 
+//for local SVD
+#include <Eigen/SVD>
+
 namespace MG {
 
     // Implementation -- where possible call the site versions
@@ -214,6 +217,7 @@ namespace MG {
         extractAggregateBlockT(target, src, block, aggr);
     }
 
+
     //! Extract the spins belonging to a given aggregate from QDP++ source vector src, into QDP++ target vector target
     template <typename QS> inline void extractAggregateT(QS &target, const QS &src, int aggr) {
 
@@ -301,6 +305,131 @@ namespace MG {
     void orthonormalizeBlockAggregates(std::vector<std::shared_ptr<QPhiXSpinorF>> &vecs,
                                        const std::vector<Block> &block_list) {
         orthonormalizeBlockAggregatesT(vecs, block_list);
+    }
+
+    template <typename QS>
+    inline void QPhiXSpinorToEigenT(const QS &src, Eigen::MatrixXcd &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx) {
+
+	for (int site = 0; site < num_sites; ++site){
+	const CBSite &cbsite = block_sitelist[site];
+		for (int spin = 0; spin < 4; ++spin) {
+			for (int color = 0; color < 3; ++color) {
+			 P(color + 3*spin + 3*4*site, vec_idx) = std::complex<double>(src(0, cbsite.cb, cbsite.site, spin, color, RE), src(0, cbsite.cb, cbsite.site, spin, color, IM));
+			}
+		}
+	}
+
+
+     }
+
+    void QPhiXSpinorToEigen(const QPhiXSpinor &target, Eigen::MatrixXcd &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx) {
+	QPhiXSpinorToEigenT(target, P, num_sites, block_sitelist, vec_idx);
+    }
+
+    void QPhiXSpinorToEigen(const QPhiXSpinorF &target, Eigen::MatrixXcd &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx) {
+        QPhiXSpinorToEigenT(target, P, num_sites, block_sitelist, vec_idx);
+    }
+
+    template <typename QS>
+    inline void EigenToQPhixSpinorT(QS &target, const Eigen::MatrixXcd &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx){
+
+	for (int site = 0; site < num_sites; ++site){
+	const CBSite &cbsite = block_sitelist[site];
+		for (int spin = 0; spin < 4; ++spin){
+			for (int color = 0; color < 3; color++){
+			target(0, cbsite.cb, cbsite.site, spin, color, RE) = P(color + 3*spin + 3*4*site, vec_idx).real();
+			target(0, cbsite.cb, cbsite.site, spin, color, IM) = P(color + 3*spin + 3*4*site, vec_idx).imag();
+			}
+		}
+	}
+
+    }
+
+    void EigenToQPhiXSpinor(QPhiXSpinor &target, const Eigen::MatrixXcd &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx) {
+        EigenToQPhixSpinorT(target, P, num_sites, block_sitelist, vec_idx);
+    }
+
+    void EigenToQPhiXSpinor(QPhiXSpinorF &target, const Eigen::MatrixXcd &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx) {
+        EigenToQPhixSpinorT(target, P, num_sites, block_sitelist, vec_idx);
+    }
+
+    //gather the vecs on the block, and do an SVD of the block
+    template <typename QS>
+    inline void localSVDT(std::vector<std::shared_ptr<QS>> &vecs, const std::vector<Block> &block_list,
+			  const int &k_f){
+
+	int num_blocks = block_list.size();
+        for (int block_id = 0; block_id < num_blocks; block_id++){
+
+		const Block &block = block_list[block_id];
+		auto block_sitelist = block.getCBSiteList();
+		int num_sites = block.getNumSites();
+		int num_vecs = vecs.size();
+
+		Eigen::MatrixXcd P(3*4*num_sites, num_vecs);
+
+		for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs); curr_vec++){
+		
+		//	for (int site = 0; site < num_sites; ++site){
+			
+			//const CBSite &cbsite = block_sitelist[site];
+			
+				//need all the spins, not just aggregates
+				//for (int spin = 0; spin < 4; ++spin) {
+				
+				//	for (int color = 0; color < 3; ++color) {
+
+				//	P(color + 3*spin + 3*4*site, curr_vec) = std::complex<double>(*(vecs[curr_vec])(0, cbsite.cb, cbsite.site, spin, color, RE), *(vecs[curr_vec])(0, cbsite.cb, cbsite.site, spin, color, IM));
+
+			//	} //color	
+
+		//	} //spin
+		
+	//	} //site
+	QPhiXSpinorToEigen(*(vecs[curr_vec]), P, num_sites, block_sitelist, static_cast<int>(curr_vec));
+
+	} //curr_vec
+
+	//now P should have the contributions of the vectors for each block, so do the SVD, only need U
+	Eigen::JacobiSVD<Eigen::MatrixXcd> svd(P, Eigen::ComputeThinU);
+	//overwrite P with U
+	P = svd.matrixU();
+
+	//now place them back in the vectors, keeping the ones correspoding to the largest singular values. The singular vectors U_i are sorted largest to smallest in Eigen
+	vecs.resize(k_f);
+	for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(k_f);  curr_vec++){
+
+//		for (int site = 0; site < num_sites; ++site){
+		
+//		const CBSite &cbsite = block_sitelist[site];
+		
+//		for (int spin = 0; spin < 4; ++spin){
+
+//			for (int color = 0; color < 3; color++){
+
+//			*(vecs[curr_vec])(0, cbsite.cb, cbsite.site, spin, color, RE) = P(color + 3*spin + 3*4*site, curr_vec).real();
+//			*(vecs[curr_vec])(0, cbsite.cb, cbsite.site, spin, color, IM) = P(color + 3*spin + 3*4*site, curr_vec).imag();			
+
+//			} //color
+
+//		} //spin		
+
+//		} //site
+	EigenToQPhiXSpinor(*(vecs[curr_vec]), P, num_sites, block_sitelist, static_cast<int>(curr_vec));
+	} //curr_vec
+
+    } //block_id
+
+    }
+
+    void localSVD(std::vector<std::shared_ptr<QPhiXSpinor>> &vecs, const std::vector<Block> &block_list,
+		  const int &k_f){
+  	localSVDT(vecs, block_list, k_f);
+    }
+
+    void localSVD(std::vector<std::shared_ptr<QPhiXSpinorF>> &vecs, const std::vector<Block> &block_list,
+		  const int &k_f){
+	localSVDT(vecs, block_list, k_f);
     }
 
     //! 'Restrict' a QDP++ spinor to a CoarseSpinor with the same geometry
