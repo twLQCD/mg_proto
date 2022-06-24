@@ -341,7 +341,7 @@ namespace MG {
 	//const int n_per_chiral = (info.GetNumSpins() == 4) ? 2 * num_color : num_color;
 	EigenDims_t dims = returnMatDims(*(vecs[idx]), num_vecs);
 
-	Eigen::MatrixXcf P(dims.n, dims.m);
+	Eigen::MatrixXcf P(dims.n * num_sites, dims.m);
 
 		for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs); ++curr_vec){
 
