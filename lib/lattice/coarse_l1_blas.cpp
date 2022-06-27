@@ -405,6 +405,39 @@ namespace MG {
         } // End of Parallel for region
     }
 
+    void ScaleVec(const std::vector<double> &alpha, CoarseSpinor &x, const CBSubset &subset) {
+
+        assert(alpha.size() == (size_t)x.GetNCol());
+        const LatticeInfo &x_info = x.GetInfo();
+
+        IndexType num_cbsites = x_info.GetNumCBSites();
+        IndexType num_colorspin = x.GetNumColorSpin();
+        IndexType ncol = x.GetNCol();
+
+#pragma omp parallel for collapse(3) schedule(static)
+        for (int cb = subset.start; cb < subset.end; ++cb) {
+            for (int cbsite = 0; cbsite < num_cbsites; ++cbsite) {
+                for (int col = 0; col < ncol; ++col) {
+
+		    // Identify the site and the column
+                    float *x_site_data = x.GetSiteDataPtr(col, cb, cbsite);
+                    std::complex<float> alpha_col = alpha[col];
+
+#pragma omp simd
+                    for (int cspin = 0; cspin < num_colorspin; ++cspin) {
+                        std::complex<float> t(x_site_data[RE + n_complex * cspin],
+                                              x_site_data[IM + n_complex * cspin]);
+
+                        t *= alpha_col;
+                        x_site_data[RE + n_complex * cspin] = std::real(t);
+                        x_site_data[IM + n_complex * cspin] = std::imag(t);
+                    }
+                }
+            }
+        } // End of Parallel for reduction
+    }
+
+
     void ScaleVec(const std::vector<std::complex<float>> &alpha, CoarseSpinor &x,
                   const CBSubset &subset) {
 
@@ -498,6 +531,44 @@ namespace MG {
                  const CBSubset &subset) {
         AxpyVecT(alpha, x, y, subset);
     }
+
+
+        template <typename T>
+        std::vector<std::complex<double>> negate(const std::vector<std::complex<T>> &x) {
+            std::vector<std::complex<double>> r(x.size());
+            std::transform(x.begin(), x.end(), r.begin(),
+                           [](const std::complex<T> &f) { return -f; });
+            return r;
+        }
+
+        template <typename T>
+        std::vector<double> oneoversqrt(const std::vector<T> &x) {
+            std::vector<double> r(x.size());
+            std::transform(x.begin(), x.end(), r.begin(),
+                           [](const T &f) { return 1.0/std::sqrt(f); });
+            return r;
+        }
+
+    void orthonormalizeVecs(std::vector<std::shared_ptr<CoarseSpinor>> &vecs, const CBSubset &subset){
+
+	//const CBSubset &subset = SUBSET_ALL;
+	for (int col = 0; col < vecs.size(); ++col){
+		for (int col2 = 0; col2 <= col; ++col2){
+	
+		std::vector<std::complex<double>> dot = InnerProductVec(*(vecs[col2]), *(vecs[col]), subset);
+		AxpyVec(negate(dot), *(vecs[col2]), *(vecs[col]), subset);
+	
+		}
+
+		std::vector<double> alpha = (Norm2Vec(*(vecs[col]), subset));
+		ScaleVec(oneoversqrt(alpha), *(vecs[col]), subset);
+
+	    //std::vector<double> beta = (Norm2Vec(*(vecs[col]), subset));
+	    //std::cout << "Norm of null vector no. " << col << " is " << beta[0] << std::endl;
+	}
+
+    }
+
     void YpeqxVec(const CoarseSpinor &x, CoarseSpinor &y, const CBSubset &subset) {
         const LatticeInfo &x_info = x.GetInfo();
         const LatticeInfo &y_info = y.GetInfo();

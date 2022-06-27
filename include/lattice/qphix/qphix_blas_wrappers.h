@@ -37,6 +37,8 @@ namespace MG {
                  QPhiXSpinor &y, const CBSubset &subset = SUBSET_ALL);
     void AxpyVec(const std::vector<std::complex<double>> &alpha, const QPhiXSpinor &x,
                  QPhiXSpinor &y, const CBSubset &subset = SUBSET_ALL);
+    void orthonormalizeVecs(std::vector<std::shared_ptr<QPhiXSpinor>> &vecs, const CBSubset &subset);
+    void orthonormalizeVecs(std::vector<std::shared_ptr<QPhiXSpinorF>> &vecs, const CBSubset &subset);
     void Gaussian(QPhiXSpinor &v, const CBSubset &subset = SUBSET_ALL);
     void YpeqXVec(const QPhiXSpinor &x, QPhiXSpinor &y, const CBSubset &subset = SUBSET_ALL);
     void YmeqXVec(const QPhiXSpinor &x, QPhiXSpinor &y, const CBSubset &subset = SUBSET_ALL);

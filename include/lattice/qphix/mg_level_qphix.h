@@ -13,6 +13,7 @@
 #include "lattice/coarse/coarse_op.h"
 #include "lattice/mg_level_coarse.h"
 #include "lattice/qphix/qphix_types.h"
+#include "lattice/qphix/qphix_blas_wrappers.h"
 #include "lattice/solver.h"
 #include "utils/timer.h"
 #include <MG_config.h>
@@ -148,12 +149,15 @@ namespace MG {
         }
 
         const IndexArray &latdims = fine_level.info->GetLatticeDimensions();
-
+	const CBSubset &subset = SUBSET_ALL;
         MasterLog(INFO, "MG Level 0: Creating BlockList");
         IndexArray blocked_lattice_dims;
         IndexArray blocked_lattice_orig;
         CreateBlockList(fine_level.blocklist, blocked_lattice_dims, blocked_lattice_orig, latdims,
                         p.block_sizes[0], fine_level.info->GetLatticeOrigin());
+
+	//need to orthonormalize vectors before hand
+	orthonormalizeVecs(fine_level.null_vecs, subset);
 
 	//at this point we have the fine level null vecs (or evecs). So here is where we do the LSVD
 	//and keep the singular vectors corresponding to the largest singular values of the blocks
@@ -173,7 +177,7 @@ namespace MG {
 	//now have a different number of near null vectors (potentially) so change
 	//num_vecs to be equal to the number of near null vectors
 	num_vecs = fine_level.null_vecs.size();
-
+	assert(num_vecs = p.n_vecs_keep[0]);
         // Create the blocked Clover and Gauge Fields
         // This service needs the blocks, the vectors and is a convenience
         // Function of the M

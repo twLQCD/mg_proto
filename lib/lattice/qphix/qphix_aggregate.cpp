@@ -308,6 +308,29 @@ namespace MG {
     }
 
     template <typename QS>
+    inline void printQPhiXSpinorT(const QS &src, const int &num_sites, const std::vector<CBSite> &block_sitelist){
+
+	QDPIO::cout << "Printing QPhiXSpinor..." << std::endl;
+	for (int site = 0; site < num_sites; ++site){
+		const CBSite &cbsite = block_sitelist[site];
+		for (int spin = 0; spin < 4; ++spin){
+			for (int color = 0; color < 3; ++color){
+				QDPIO::cout << "Real: " << src(0, cbsite.cb, cbsite.site, spin, color, RE) << " Imag: " << src(0, cbsite.cb, cbsite.site, spin, color, IM) << std::endl;
+			}
+		}
+	}
+    }
+
+    void printQPhiXSpinor(const QPhiXSpinor &src, const int &num_sites, const std::vector<CBSite> &block_sitelist){
+	printQPhiXSpinorT(src, num_sites, block_sitelist);
+    }
+
+    void printQPhiXSpinor(const QPhiXSpinorF &src, const int &num_sites, const std::vector<CBSite> &block_sitelist){
+        printQPhiXSpinorT(src, num_sites, block_sitelist);
+    }
+
+
+    template <typename QS>
     inline void QPhiXSpinorToEigenT(const QS &src, Eigen::MatrixXcd &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx) {
 
 	for (int site = 0; site < num_sites; ++site){
@@ -367,6 +390,12 @@ namespace MG {
 		int num_vecs = vecs.size();
 
 		Eigen::MatrixXcd P(3*4*num_sites, num_vecs);
+		if (block_id == 0){
+		QDPIO::cout << "Size of block is " << 3*4*num_sites << std::endl;
+		}
+		//if (block_id == 0) {
+		//	printQPhiXSpinor(*(vecs[0]), num_sites, block_sitelist);
+		//}
 
 		for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs); curr_vec++){
 		
@@ -391,9 +420,22 @@ namespace MG {
 	} //curr_vec
 
 	//now P should have the contributions of the vectors for each block, so do the SVD, only need U
+	//if (block_id == 0) {
+	          //      QDPIO::cout << "Printing block..." << std::endl;
+                //for (int j = 0; j < num_vecs; ++j){
+                //        for (int i = 0; i < 3*4*num_sites; ++i){
+              //          std::cout << i << " " << j << " " << P(i,j).real() << " " << P(i,j).imag() << std::endl;
+            //            }
+          //      }
+	//}
 	Eigen::JacobiSVD<Eigen::MatrixXcd> svd(P, Eigen::ComputeThinU);
 	//overwrite P with U
 	P = svd.matrixU();
+
+	if (block_id == 0) {
+		QDPIO::cout << "Singular values of block 0 are :" << std::endl;
+		std::cout << svd.singularValues() << std::endl;
+	}
 
 	//now place them back in the vectors, keeping the ones correspoding to the largest singular values. The singular vectors U_i are sorted largest to smallest in Eigen
 	vecs.resize(k_f);
@@ -417,6 +459,11 @@ namespace MG {
 //		} //site
 	EigenToQPhiXSpinor(*(vecs[curr_vec]), P, num_sites, block_sitelist, static_cast<int>(curr_vec));
 	} //curr_vec
+
+         //       if (block_id == 0) {
+           //             printQPhiXSpinor(*(vecs[0]), num_sites, block_sitelist);
+             //   }
+
 
     } //block_id
 

@@ -38,6 +38,7 @@ namespace MG {
                  CoarseSpinor &y, const CBSubset &subset = SUBSET_ALL);
     void AxpyVec(const std::vector<std::complex<double>> &alpha, const CoarseSpinor &x,
                  CoarseSpinor &y, const CBSubset &subset = SUBSET_ALL);
+    void orthonormalizeVecs(std::vector<std::shared_ptr<CoarseSpinor>> &vecs, const CBSubset &subset);
     void YpeqxVec(const CoarseSpinor &x, CoarseSpinor &y, const CBSubset &subset = SUBSET_ALL);
     void YmeqxVec(const CoarseSpinor &x, CoarseSpinor &y, const CBSubset &subset = SUBSET_ALL);
     void AxpyVec(const std::vector<float> &alpha, const CoarseSpinor &x, CoarseSpinor &y,

@@ -10,10 +10,27 @@
 #include "lattice/qphix/qphix_qdp_utils.h"
 #include "lattice/qphix/qphix_types.h"
 #include <qphix/blas_full_spinor.h>
+#include <cmath>
 
 using namespace QPhiX;
 
 namespace MG {
+
+        template <typename T>
+        std::vector<std::complex<float>> negate(const std::vector<std::complex<T>> &x) {
+            std::vector<std::complex<float>> r(x.size());
+            std::transform(x.begin(), x.end(), r.begin(),
+                           [](const std::complex<T> &f) { return -f; });
+            return r;
+        }
+
+        template <typename T>
+        std::vector<double> oneoversqrt(const std::vector<T> &x) {
+            std::vector<double> r(x.size());
+            std::transform(x.begin(), x.end(), r.begin(),
+                           [](const T &f) { return 1.0/std::sqrt(f); });
+            return r;
+        }
 
     // x = x - y; followed by || x ||
     template <typename ST>
@@ -197,6 +214,38 @@ namespace MG {
     void AxpyVec(const std::vector<std::complex<double>> &alpha, const QPhiXSpinorF &x,
                  QPhiXSpinorF &y, const CBSubset &subset) {
         AxpyVecT(alpha, x, y, subset);
+    }
+
+    //for local SVD, need to orthonormalize the vectors first before the svd is done
+    template <typename ST>
+    inline void orthonormalizeVecsT(std::vector<std::shared_ptr<ST>> &vecs, const CBSubset &subset){
+
+    //const CBSubset &subset = SUBSET_ALL;
+
+    for (int col = 0; col < vecs.size(); ++col){
+
+        for (int col2 = 0; col2 <= col; ++col2){
+
+        std::vector<std::complex<double>> dot = InnerProductVec(*(vecs[col2]), *(vecs[col]), subset);
+        AxpyVec(negate(dot), *(vecs[col2]), *(vecs[col]), subset);
+
+        }
+
+        std::vector<double> alpha = (Norm2Vec(*(vecs[col]), subset));
+	AxVec(oneoversqrt(alpha), *(vecs[col]), subset);
+
+
+    }
+
+
+    }
+
+    void orthonormalizeVecs(std::vector<std::shared_ptr<QPhiXSpinor>> &vecs, const CBSubset &subset){
+         orthonormalizeVecsT(vecs, subset);
+    }
+ 
+    void orthonormalizeVecs(std::vector<std::shared_ptr<QPhiXSpinorF>> &vecs, const CBSubset &subset){
+	 orthonormalizeVecsT(vecs, subset);
     }
 
     template <typename ST> void GaussianT(ST &v, const CBSubset &subset) {
