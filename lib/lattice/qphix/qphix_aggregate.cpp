@@ -331,10 +331,25 @@ namespace MG {
 
 
     template <typename QS>
-    inline void QPhiXSpinorToEigenT(const QS &src, Eigen::MatrixXcd &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx) {
-
+    inline void QPhiXSpinorToEigenT(const QS &src, Eigen::MatrixXcd &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx, const LatticeInfo &info) {
+	//QDPIO::cout << "Printing site list of block..." << std::endl;
+	const IndexArray &latdims = info.GetLatticeDimensions();
+	const IndexType cborig = info.GetCBOrigin();
+	IndexArray global_lattice_dims;
+	info.LocalDimsToGlobalDims(global_lattice_dims, latdims);
+	//IndexArray coords;
 	for (int site = 0; site < num_sites; ++site){
 	const CBSite &cbsite = block_sitelist[site];
+		//QDPIO::cout << "Checkerboard : " << static_cast<int>(cbsite.cb) << std::endl;
+		//QDPIO::cout << "Site : " << static_cast<int>(cbsite.site) << std::endl;
+		//CBIndexToCoords(cbsite.site, cbsite.cb, latdims, cborig, coords);
+		//unsigned int idx = CoordsToIndex(coords, latdims);
+		//QDPIO::cout << idx << std::endl;
+		IndexArray local_coor, global_coor;
+		CBIndexToCoords(cbsite.site, cbsite.cb, latdims, cborig, local_coor);
+		info.LocalCoordToGlobalCoord(global_coor, local_coor);
+		unsigned int idx = CoordsToIndex(global_coor, latdims);
+		//QDPIO::cout << idx << std::endl;
 		for (int spin = 0; spin < 4; ++spin) {
 			for (int color = 0; color < 3; ++color) {
 			 P(color + 3*spin + 3*4*site, vec_idx) = std::complex<double>(src(0, cbsite.cb, cbsite.site, spin, color, RE), src(0, cbsite.cb, cbsite.site, spin, color, IM));
@@ -345,12 +360,12 @@ namespace MG {
 
      }
 
-    void QPhiXSpinorToEigen(const QPhiXSpinor &target, Eigen::MatrixXcd &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx) {
-	QPhiXSpinorToEigenT(target, P, num_sites, block_sitelist, vec_idx);
+    void QPhiXSpinorToEigen(const QPhiXSpinor &target, Eigen::MatrixXcd &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx, const LatticeInfo &info) {
+	QPhiXSpinorToEigenT(target, P, num_sites, block_sitelist, vec_idx, info);
     }
 
-    void QPhiXSpinorToEigen(const QPhiXSpinorF &target, Eigen::MatrixXcd &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx) {
-        QPhiXSpinorToEigenT(target, P, num_sites, block_sitelist, vec_idx);
+    void QPhiXSpinorToEigen(const QPhiXSpinorF &target, Eigen::MatrixXcd &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx, const LatticeInfo &info) {
+        QPhiXSpinorToEigenT(target, P, num_sites, block_sitelist, vec_idx, info);
     }
 
     template <typename QS>
@@ -379,20 +394,21 @@ namespace MG {
     //gather the vecs on the block, and do an SVD of the block
     template <typename QS>
     inline void localSVDT(std::vector<std::shared_ptr<QS>> &vecs, const std::vector<Block> &block_list,
-			  const int &k_f){
+			  const int &k_f, const LatticeInfo &info){
 
 	int num_blocks = block_list.size();
+	int num_vecs = vecs.size();
         for (int block_id = 0; block_id < num_blocks; block_id++){
-
+	//	QDPIO::cout << "Doing SVD of block number " << block_id << std::endl;
 		const Block &block = block_list[block_id];
 		auto block_sitelist = block.getCBSiteList();
 		int num_sites = block.getNumSites();
-		int num_vecs = vecs.size();
+		//int num_vecs = vecs.size();
 
 		Eigen::MatrixXcd P(3*4*num_sites, num_vecs);
-		if (block_id == 0){
-		QDPIO::cout << "Size of block is " << 3*4*num_sites << std::endl;
-		}
+		//if (block_id == 0){
+		//QDPIO::cout << "Size of block is " << 3*4*num_sites << std::endl;
+		//}
 		//if (block_id == 0) {
 		//	printQPhiXSpinor(*(vecs[0]), num_sites, block_sitelist);
 		//}
@@ -415,7 +431,7 @@ namespace MG {
 		//	} //spin
 		
 	//	} //site
-	QPhiXSpinorToEigen(*(vecs[curr_vec]), P, num_sites, block_sitelist, static_cast<int>(curr_vec));
+	QPhiXSpinorToEigen(*(vecs[curr_vec]), P, num_sites, block_sitelist, static_cast<int>(curr_vec), info);
 
 	} //curr_vec
 
@@ -432,14 +448,14 @@ namespace MG {
 	//overwrite P with U
 	P = svd.matrixU();
 
-	if (block_id == 0) {
-		QDPIO::cout << "Singular values of block 0 are :" << std::endl;
-		std::cout << svd.singularValues() << std::endl;
-	}
+	//if (block_id == 0) {
+	//	QDPIO::cout << "Singular values of block " << block_id << "  are :" << std::endl;
+	//	std::cout << svd.singularValues() << std::endl;
+	//}
 
 	//now place them back in the vectors, keeping the ones correspoding to the largest singular values. The singular vectors U_i are sorted largest to smallest in Eigen
-	vecs.resize(k_f);
-	for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(k_f);  curr_vec++){
+	//vecs.resize(k_f);
+	for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs);  curr_vec++){
 
 //		for (int site = 0; site < num_sites; ++site){
 		
@@ -467,16 +483,21 @@ namespace MG {
 
     } //block_id
 
+    //remove the last vecs, keeping only the first k_f
+    for (int i = num_vecs; i > k_f; --i){
+	vecs.pop_back();
+    }
+
     }
 
     void localSVD(std::vector<std::shared_ptr<QPhiXSpinor>> &vecs, const std::vector<Block> &block_list,
-		  const int &k_f){
-  	localSVDT(vecs, block_list, k_f);
+		  const int &k_f, const LatticeInfo &info){
+  	localSVDT(vecs, block_list, k_f, info);
     }
 
     void localSVD(std::vector<std::shared_ptr<QPhiXSpinorF>> &vecs, const std::vector<Block> &block_list,
-		  const int &k_f){
-	localSVDT(vecs, block_list, k_f);
+		  const int &k_f, const LatticeInfo &info){
+	localSVDT(vecs, block_list, k_f, info);
     }
 
     //! 'Restrict' a QDP++ spinor to a CoarseSpinor with the same geometry

@@ -326,12 +326,13 @@ namespace MG {
 		  const int &k_c){
 
 	int num_blocks = block_list.size();
+	int num_vecs = vecs.size();
 	for (int block_id = 0; block_id < num_blocks; block_id++){
 	
 	const Block &block = block_list[block_id];
 	std::vector<CBSite> block_sitelist = block.getCBSiteList();
 	int num_sites = block.getNumSites();
-	int num_vecs = vecs.size();
+	//int num_vecs = vecs.size();
 
 	IndexType idx = 0;
 	//std::shared_ptr<CoarseSpinor> psi;
@@ -368,8 +369,8 @@ namespace MG {
 
 		//now place them back in the vectors, keeping the ones corresponding to the largest singular values of the block. 
 		//The singular vectors U_i are sorted largest to smallest already in Eigen
-		vecs.resize(k_c);
-		for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(k_c); curr_vec++){
+		//vecs.resize(k_c);
+		for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs); curr_vec++){
 
 			//for (int site = 0; site < num_sites; ++site){
 			//const CBSite &cbsite = block_sitelist[site];
@@ -386,6 +387,10 @@ namespace MG {
 		//} //curr_vec
 
 	} //block_id
+
+    for (int i = num_vecs; i > k_c; --i){
+    vecs.pop_back();
+    }
 
     }
 

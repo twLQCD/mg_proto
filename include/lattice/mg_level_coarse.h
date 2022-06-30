@@ -121,7 +121,7 @@ namespace MG {
 	//now have a different number of near null vectors (potentially) so change
 	//num_vecs to be equal to the number of near null vectors
 	num_vecs = fine_level.null_vecs.size();
-	assert(num_vecs == p.n_vecs_keep[fine_level_id]);
+	//assert(num_vecs == p.n_vecs_keep[fine_level_id]);
         // Create the blocked Clover and Gauge Fields
         // This service needs the blocks, the vectors and is a convenience
         // Function of the M

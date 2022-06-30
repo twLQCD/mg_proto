@@ -163,7 +163,7 @@ namespace MG {
 	//and keep the singular vectors corresponding to the largest singular values of the blocks
 	if (p.n_vecs_keep[0] != 0){
 	MasterLog(INFO, "MG Level 0: Performing SVD on Local Blocks");
-	localSVD(fine_level.null_vecs, fine_level.blocklist, p.n_vecs_keep[0]);
+	localSVD(fine_level.null_vecs, fine_level.blocklist, p.n_vecs_keep[0], *(fine_level.info));
 	}
 
         // Orthonormalize the vectors -- I heard once that for GS stability is improved
@@ -177,7 +177,7 @@ namespace MG {
 	//now have a different number of near null vectors (potentially) so change
 	//num_vecs to be equal to the number of near null vectors
 	num_vecs = fine_level.null_vecs.size();
-	assert(num_vecs = p.n_vecs_keep[0]);
+	//assert(num_vecs = p.n_vecs_keep[0]);
         // Create the blocked Clover and Gauge Fields
         // This service needs the blocks, the vectors and is a convenience
         // Function of the M
