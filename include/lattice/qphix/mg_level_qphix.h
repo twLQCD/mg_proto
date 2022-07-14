@@ -70,6 +70,8 @@ namespace MG {
         SpinorT b(*(fine_level.info));
         ZeroVec(b);
 
+	
+
         // Generate the vectors
         int num_vecs = p.n_vecs[0];
 
@@ -85,9 +87,11 @@ namespace MG {
             fine_level.null_solver = std::make_shared<const SolverT>(*M_fine, params);
 
             for (int k = 0; k < num_vecs; ++k) {
+		
                 std::vector<LinearSolverResults> res = (*(fine_level.null_solver))(
                     *(fine_level.null_vecs[k]), b, ABSOLUTE, InitialGuessGiven);
                 assert(res.size() == 1);
+
 
                 double norm2_cb0 = sqrt(Norm2Vec(*(fine_level.null_vecs[k]), SUBSET_EVEN)[0]);
                 double norm2_cb1 = sqrt(Norm2Vec(*(fine_level.null_vecs[k]), SUBSET_ODD)[0]);
@@ -157,13 +161,13 @@ namespace MG {
                         p.block_sizes[0], fine_level.info->GetLatticeOrigin());
 
 	//need to orthonormalize vectors before hand
-	orthonormalizeVecs(fine_level.null_vecs, subset);
+	//orthonormalizeVecs(fine_level.null_vecs, subset);
 
 	//at this point we have the fine level null vecs (or evecs). So here is where we do the LSVD
 	//and keep the singular vectors corresponding to the largest singular values of the blocks
 	if (p.n_vecs_keep[0] != 0){
 	MasterLog(INFO, "MG Level 0: Performing SVD on Local Blocks");
-	localSVD(fine_level.null_vecs, fine_level.blocklist, p.n_vecs_keep[0], *(fine_level.info));
+	localSVD(fine_level.null_vecs, fine_level.blocklist, p.n_vecs_keep[0]);
 	}
 
         // Orthonormalize the vectors -- I heard once that for GS stability is improved

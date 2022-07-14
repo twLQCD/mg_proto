@@ -58,8 +58,11 @@ namespace MG {
 
         std::shared_ptr<CoarseSpinor> x;
         if (params.RsdTarget > 0) {
-            x = std::make_shared<CoarseSpinor>(fine_info, num_vecs);
+            
+	    x = std::make_shared<CoarseSpinor>(fine_info, num_vecs);
             CoarseSpinor b(fine_info, num_vecs);
+	
+
             ZeroVec(b);
             Gaussian(*x);
 
@@ -71,6 +74,8 @@ namespace MG {
             std::vector<LinearSolverResults> res =
                 (*(fine_level.null_solver))(*x, b, ABSOLUTE, InitialGuessGiven);
             assert(res.size() == (unsigned int)num_vecs);
+
+
             if (num_vecs > 0)
                 MasterLog(INFO, "Level %d: Solver Took: %d iterations", fine_level_id,
                           res[0].n_count);
@@ -105,7 +110,7 @@ namespace MG {
 	const CBSubset &subset = fine_level.null_solver->GetSubset();
 
 	//need to orthonormalize vectors before hand
-	orthonormalizeVecs(fine_level.null_vecs, subset);
+	//orthonormalizeVecs(fine_level.null_vecs, subset);
 
 	if (p.n_vecs_keep[fine_level_id] != 0){
 	MasterLog(INFO, "Performing SVD of Local Blocks on Level %d",fine_level_id);

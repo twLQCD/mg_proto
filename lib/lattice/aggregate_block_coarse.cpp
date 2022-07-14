@@ -291,6 +291,8 @@ namespace MG {
 
 	const CBSite &cbsite = block_sitelist[site];
 	const float *src_site_data = src.GetSiteDataPtr(0, cbsite.cb, cbsite.site);
+
+#pragma omp simd
 		for (int colorspin = 0; colorspin < 2*n_per_chiral; ++colorspin){
 
 		P(colorspin + 2*n_per_chiral*site, vec_idx) = std::complex<float>(src_site_data[RE + n_complex * colorspin], src_site_data[IM + n_complex * colorspin]);
@@ -311,6 +313,7 @@ namespace MG {
       const CBSite &cbsite = block_sitelist[site];
       float *target_site_data = target.GetSiteDataPtr(0, cbsite.cb, cbsite.site);
 
+#pragma omp simd
            for (int colorspin = 0; colorspin < 2*n_per_chiral; ++colorspin){
 
            target_site_data[RE + n_complex * colorspin] = P(colorspin + 2*n_per_chiral*site, vec_idx).real();
@@ -327,6 +330,10 @@ namespace MG {
 
 	int num_blocks = block_list.size();
 	int num_vecs = vecs.size();
+	IndexType idx = 0;
+	EigenDims_t dims = returnMatDims(*(vecs[idx]), num_vecs);
+	
+#pragma omp parallel for
 	for (int block_id = 0; block_id < num_blocks; block_id++){
 	
 	const Block &block = block_list[block_id];
@@ -334,13 +341,13 @@ namespace MG {
 	int num_sites = block.getNumSites();
 	//int num_vecs = vecs.size();
 
-	IndexType idx = 0;
+	//IndexType idx = 0;
 	//std::shared_ptr<CoarseSpinor> psi;
 	//CopyVec(*psi, vecs[idx]);
         //const int num_color = *psi.GetNumColor();
         //const LatticeInfo &info = *(vecs[idx]).GetInfo();
 	//const int n_per_chiral = (info.GetNumSpins() == 4) ? 2 * num_color : num_color;
-	EigenDims_t dims = returnMatDims(*(vecs[idx]), num_vecs);
+	//EigenDims_t dims = returnMatDims(*(vecs[idx]), num_vecs);
 
 	Eigen::MatrixXcf P(dims.n * num_sites, dims.m);
 
@@ -385,12 +392,21 @@ namespace MG {
 
 			//} //site		
 		//} //curr_vec
+        if (block_id == 0) {
+                //QDPIO::cout << "Singular values of block " << block_id << "  are :" << std::endl;
+                MasterLog(INFO, "Printing Singular Values of block 0 on coarse grid...");
+                for (int j = 0; j < num_vecs; ++j){
+                        //QDPIO::cout << svd.singularValues()[j] << std::endl;
+                        MasterLog(INFO, "%f", svd.singularValues()[j]);
+                }
+        }
 
 	} //block_id
 
-    for (int i = num_vecs; i > k_c; --i){
-    vecs.pop_back();
-    }
+    //for (int i = num_vecs; i > k_c; --i){
+    //vecs.pop_back();
+    //}
+    vecs.resize(k_c);
 
     }
 
