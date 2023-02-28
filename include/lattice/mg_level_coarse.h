@@ -112,8 +112,14 @@ namespace MG {
 	//need to orthonormalize vectors before hand
 	//orthonormalizeVecs(fine_level.null_vecs, subset);
 
-	if (p.n_vecs_keep[fine_level_id] != 0){
-	MasterLog(INFO, "Performing SVD of Local Blocks on Level %d",fine_level_id);
+	//do the svd on each partition separately
+	if (p.do_psvd[fine_level_id]){
+	MasterLog(INFO, "Performing SVD of Local Blocks on Level %d for each partition of the near null vectors",fine_level_id);
+	partitionedSVD(fine_level.null_vecs, fine_level.blocklist, p.n_partitions[fine_level_id]);
+	}
+	//do the svd on all partitions simultaneously
+	if (p.do_lsvd[fine_level_id]){
+	MasterLog(INFO, "Performing SVD of Local Blocks on Level %d for all partitions of the near null vectors",fine_level_id);
 	localSVD(fine_level.null_vecs, fine_level.blocklist, p.n_vecs_keep[fine_level_id]);
 	}
 

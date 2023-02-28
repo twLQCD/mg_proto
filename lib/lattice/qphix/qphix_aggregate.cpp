@@ -332,24 +332,8 @@ namespace MG {
 
     template <typename QS>
     inline void QPhiXSpinorToEigenT(const QS &src, Eigen::MatrixXcd &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx) {
-	//QDPIO::cout << "Printing site list of block..." << std::endl;
-	//const IndexArray &latdims = info.GetLatticeDimensions();
-	//const IndexType cborig = info.GetCBOrigin();
-	//IndexArray global_lattice_dims;
-	//info.LocalDimsToGlobalDims(global_lattice_dims, latdims);
-	//IndexArray coords;
 	for (int site = 0; site < num_sites; ++site){
 	const CBSite &cbsite = block_sitelist[site];
-		//QDPIO::cout << "Checkerboard : " << static_cast<int>(cbsite.cb) << std::endl;
-		//QDPIO::cout << "Site : " << static_cast<int>(cbsite.site) << std::endl;
-		//CBIndexToCoords(cbsite.site, cbsite.cb, latdims, cborig, coords);
-		//unsigned int idx = CoordsToIndex(coords, latdims);
-		//QDPIO::cout << idx << std::endl;
-		//IndexArray local_coor, global_coor;
-		//CBIndexToCoords(cbsite.site, cbsite.cb, latdims, cborig, local_coor);
-		//info.LocalCoordToGlobalCoord(global_coor, local_coor);
-		//unsigned int idx = CoordsToIndex(global_coor, latdims);
-		//QDPIO::cout << idx << std::endl;
 #pragma omp parallel for collapse(2)
 		for (int spin = 0; spin < 4; ++spin) {
 			for (int color = 0; color < 3; ++color) {
@@ -393,6 +377,56 @@ namespace MG {
         EigenToQPhixSpinorT(target, P, num_sites, block_sitelist, vec_idx);
     }
 
+    //gather the vecs belonging to each partition on the block
+    //and do an svd on that partition
+    template <typename QS>
+    inline void partitionedSVDT(std::vector<std::shared_ptr<QS>> &vecs, const std::vector<Block> &block_list,
+		                              const int &num_part){
+    int num_blocks = block_list.size();
+    for (int ipart = 0; ipart < num_part; ipart++) {
+    int num_vecs = (int)vecs.size() / num_part;
+    int max_vec_id = (ipart+1)*num_vecs;
+    int min_vec_id = ipart*num_vecs;
+    std::vector<std::shared_ptr<QS>> part_vecs(vecs.begin() + min_vec_id, vecs.begin() + max_vec_id);
+
+#pragma omp parallel for
+    for (int block_id = 0; block_id < num_blocks; block_id++){
+    const Block &block = block_list[block_id];
+    auto block_sitelist = block.getCBSiteList();
+    int num_sites = block.getNumSites();
+    Eigen::MatrixXcd P(3*4*num_sites, num_vecs);
+
+		    for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs); curr_vec++){
+			QPhiXSpinorToEigen(*(part_vecs[curr_vec]), P, num_sites, block_sitelist, static_cast<int>(curr_vec));
+
+		    } //curr_vec
+
+		    Eigen::JacobiSVD<Eigen::MatrixXcd> svd(P, Eigen::ComputeThinU);
+		    P = svd.matrixU();
+		    if (block_id == 0) {
+		    QDPIO::cout << "Singular values of block " << block_id << " on partition " << ipart << "  are :" << std::endl;
+		    for (int j = 0; j < num_vecs; ++j){
+			    QDPIO::cout << svd.singularValues()[j] << std::endl;
+		    }
+		    }
+		    for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs); curr_vec++){
+		    EigenToQPhiXSpinor(*(part_vecs[curr_vec]), P, num_sites, block_sitelist, static_cast<int>(curr_vec));
+		    }
+	    } //block_id
+    //is below vecs.begin() + min_vec_id or vecs.begin() + min_vec_id + 1??
+    std::copy(part_vecs.begin(), part_vecs.end(), vecs.begin() + min_vec_id);
+    } //ipart
+
+    } //func
+
+    void partitionedSVD(std::vector<std::shared_ptr<QPhiXSpinor>> &vecs, const std::vector<Block> &block_list, const int &num_part){
+	    partitionedSVDT(vecs, block_list, num_part);
+    }
+
+    void partitionedSVD(std::vector<std::shared_ptr<QPhiXSpinorF>> &vecs, const std::vector<Block> &block_list, const int &num_part){
+	                partitionedSVDT(vecs, block_list, num_part);
+    } 
+
     //gather the vecs on the block, and do an SVD of the block
     template <typename QS>
     inline void localSVDT(std::vector<std::shared_ptr<QS>> &vecs, const std::vector<Block> &block_list,
@@ -402,51 +436,18 @@ namespace MG {
 	int num_vecs = vecs.size();
 #pragma omp parallel for
         for (int block_id = 0; block_id < num_blocks; block_id++){
-	//	QDPIO::cout << "Doing SVD of block number " << block_id << std::endl;
 		const Block &block = block_list[block_id];
 		auto block_sitelist = block.getCBSiteList();
 		int num_sites = block.getNumSites();
-		//int num_vecs = vecs.size();
 
 		Eigen::MatrixXcd P(3*4*num_sites, num_vecs);
-		//if (block_id == 0){
-		//QDPIO::cout << "Size of block is " << 3*4*num_sites << std::endl;
-		//}
-		//if (block_id == 0) {
-		//	printQPhiXSpinor(*(vecs[0]), num_sites, block_sitelist);
-		//}
 
 		for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs); curr_vec++){
 		
-		//	for (int site = 0; site < num_sites; ++site){
-			
-			//const CBSite &cbsite = block_sitelist[site];
-			
-				//need all the spins, not just aggregates
-				//for (int spin = 0; spin < 4; ++spin) {
-				
-				//	for (int color = 0; color < 3; ++color) {
+		QPhiXSpinorToEigen(*(vecs[curr_vec]), P, num_sites, block_sitelist, static_cast<int>(curr_vec));
 
-				//	P(color + 3*spin + 3*4*site, curr_vec) = std::complex<double>(*(vecs[curr_vec])(0, cbsite.cb, cbsite.site, spin, color, RE), *(vecs[curr_vec])(0, cbsite.cb, cbsite.site, spin, color, IM));
+		} //curr_vec
 
-			//	} //color	
-
-		//	} //spin
-		
-	//	} //site
-	QPhiXSpinorToEigen(*(vecs[curr_vec]), P, num_sites, block_sitelist, static_cast<int>(curr_vec));
-
-	} //curr_vec
-
-	//now P should have the contributions of the vectors for each block, so do the SVD, only need U
-	//if (block_id == 0) {
-	          //      QDPIO::cout << "Printing block..." << std::endl;
-                //for (int j = 0; j < num_vecs; ++j){
-                //        for (int i = 0; i < 3*4*num_sites; ++i){
-              //          std::cout << i << " " << j << " " << P(i,j).real() << " " << P(i,j).imag() << std::endl;
-            //            }
-          //      }
-	//}
 	Eigen::JacobiSVD<Eigen::MatrixXcd> svd(P, Eigen::ComputeThinU);
 	//overwrite P with U
 	P = svd.matrixU();
@@ -462,36 +463,11 @@ namespace MG {
 	//vecs.resize(k_f);
 	for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs);  curr_vec++){
 
-//		for (int site = 0; site < num_sites; ++site){
-		
-//		const CBSite &cbsite = block_sitelist[site];
-		
-//		for (int spin = 0; spin < 4; ++spin){
-
-//			for (int color = 0; color < 3; color++){
-
-//			*(vecs[curr_vec])(0, cbsite.cb, cbsite.site, spin, color, RE) = P(color + 3*spin + 3*4*site, curr_vec).real();
-//			*(vecs[curr_vec])(0, cbsite.cb, cbsite.site, spin, color, IM) = P(color + 3*spin + 3*4*site, curr_vec).imag();			
-
-//			} //color
-
-//		} //spin		
-
-//		} //site
 	EigenToQPhiXSpinor(*(vecs[curr_vec]), P, num_sites, block_sitelist, static_cast<int>(curr_vec));
 	} //curr_vec
 
-         //       if (block_id == 0) {
-           //             printQPhiXSpinor(*(vecs[0]), num_sites, block_sitelist);
-             //   }
-
-
     } //block_id
 
-    //remove the last vecs, keeping only the first k_f
-    //for (int i = num_vecs; i > k_f; --i){
-//	vecs.pop_back();
-  //  }
     vecs.resize(k_f);
 
     }

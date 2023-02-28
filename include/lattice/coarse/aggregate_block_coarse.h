@@ -47,6 +47,9 @@ namespace MG {
     void orthonormalizeBlockAggregates(std::vector<std::shared_ptr<CoarseSpinor>> &vecs,
                                        const std::vector<Block> &block_list);
 
+    void partitionedSVD(std::vector<std::shared_ptr<CoarseSpinor>> &vecs,
+		                      const std::vector<Block> &block_list, const int &num_part);
+
     void localSVD(std::vector<std::shared_ptr<CoarseSpinor>> &vecs,
 	          const std::vector<Block> &block_list, const int &k_c);
 

@@ -325,6 +325,51 @@ namespace MG {
 
     }
 
+    void partitionedSVD(std::vector<std::shared_ptr<CoarseSpinor>> &vecs, const std::vector<Block> &block_list,
+		                      const int &num_part) {
+
+    int num_blocks = block_list.size();
+    for (int ipart = 0; ipart < num_part; ipart++) {
+    int num_vecs = (int)vecs.size() / num_part;
+    int max_vec_id = (ipart+1)*num_vecs;
+    int min_vec_id = ipart*num_vecs;
+    IndexType idx = 0;
+    std::vector<std::shared_ptr<CoarseSpinor>> part_vecs(vecs.begin() + min_vec_id, vecs.begin() + max_vec_id);
+    EigenDims_t dims = returnMatDims(*(vecs[idx]), num_vecs);
+
+#pragma omp parallel for
+    for (int block_id = 0; block_id < num_blocks; block_id++){
+
+        const Block &block = block_list[block_id];
+	std::vector<CBSite> block_sitelist = block.getCBSiteList();
+	int num_sites = block.getNumSites();
+        Eigen::MatrixXcf P(dims.n * num_sites, dims.m);
+
+		for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs); curr_vec++){
+	
+		SpinorToEigen(*(part_vecs[curr_vec]), P, num_sites, block_sitelist, static_cast<int>(curr_vec));
+		} //curr_vec
+
+		Eigen::JacobiSVD<Eigen::MatrixXcf> svd(P, ComputeThinU);
+		P = svd.matrixU();
+
+                if (block_id == 0) {
+		MasterLog(INFO, "Printing Singular Values of block 0 on coarse grid for partition number %d", ipart);
+		for (int j = 0; j < num_vecs; ++j){
+		MasterLog(INFO, "%f", svd.singularValues()[j]);
+		}
+		}
+		for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs); curr_vec++){
+		EigenToSpinor(*(part_vecs[curr_vec]), P, num_sites, block_sitelist, static_cast<int>(curr_vec));
+		}
+	} //block_id
+    //is below vecs.begin() + min_vec_id or vecs.begin() + min_vec_id + 1??
+    std::copy(part_vecs.begin(), part_vecs.end(), vecs.begin() + min_vec_id);
+    } //ipart
+
+
+    } //end func
+
     void localSVD(std::vector<std::shared_ptr<CoarseSpinor>> &vecs, const std::vector<Block> &block_list,
 		  const int &k_c){
 
@@ -339,31 +384,12 @@ namespace MG {
 	const Block &block = block_list[block_id];
 	std::vector<CBSite> block_sitelist = block.getCBSiteList();
 	int num_sites = block.getNumSites();
-	//int num_vecs = vecs.size();
 
-	//IndexType idx = 0;
-	//std::shared_ptr<CoarseSpinor> psi;
-	//CopyVec(*psi, vecs[idx]);
-        //const int num_color = *psi.GetNumColor();
-        //const LatticeInfo &info = *(vecs[idx]).GetInfo();
-	//const int n_per_chiral = (info.GetNumSpins() == 4) ? 2 * num_color : num_color;
-	//EigenDims_t dims = returnMatDims(*(vecs[idx]), num_vecs);
 
 	Eigen::MatrixXcf P(dims.n * num_sites, dims.m);
 
 		for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs); ++curr_vec){
 
-			//for (int site = 0; site < num_sites; ++site){
-
-			//const CBSite &cbsite = block_sitelist[site];
-			//const float *src_site_data = *(vecs[curr_vec]).GetSiteDataPtr(0, cbsite.cb, cbsite.site);
-			//for (int colorspin = 0; colorspin < 2*n_per_chiral; ++colorspin){
-
-			//P(colorspin + 2*n_per_chiral*site, curr_vec) = std::complex<float>(src_site_data[RE + n_complex * colorspin], src_site_data[IM + n_complex * colorspin]); 
-
-			//} //colorspin
-
-			//} //site
 		SpinorToEigen(*(vecs[curr_vec]), P, num_sites, block_sitelist, static_cast<int>(curr_vec));
 
 
@@ -379,33 +405,18 @@ namespace MG {
 		//vecs.resize(k_c);
 		for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs); curr_vec++){
 
-			//for (int site = 0; site < num_sites; ++site){
-			//const CBSite &cbsite = block_sitelist[site];
-			//float *src_site_data = *(vecs[curr_vec]).GetSiteDataPtr(0, cbsite.cb, cbsite.site);
-			
-			//for (int colorspin = 0; colorspin < 2*n_per_chiral; ++colorspin){
-
-			//src_site_data[RE + n_complex * colorspin] = P(colorspin + 2*n_per_chiral*site, curr_vec).real();
-			//src_site_data[IM + n_complex * colorspin] = P(colorspin + 2*n_per_chiral*site, curr_vec).imag();
 			EigenToSpinor(*(vecs[curr_vec]), P, num_sites, block_sitelist, static_cast<int>(curr_vec));
 			}
 
-			//} //site		
-		//} //curr_vec
-        if (block_id == 0) {
-                //QDPIO::cout << "Singular values of block " << block_id << "  are :" << std::endl;
+        	if (block_id == 0) {
                 MasterLog(INFO, "Printing Singular Values of block 0 on coarse grid...");
                 for (int j = 0; j < num_vecs; ++j){
-                        //QDPIO::cout << svd.singularValues()[j] << std::endl;
                         MasterLog(INFO, "%f", svd.singularValues()[j]);
                 }
-        }
+       		}	
 
 	} //block_id
 
-    //for (int i = num_vecs; i > k_c; --i){
-    //vecs.pop_back();
-    //}
     vecs.resize(k_c);
 
     }

@@ -26,7 +26,10 @@ namespace MG {
     struct SetupParams {
         int n_levels;
         std::vector<int> n_vecs;
+	std::vector<bool> do_psvd;
+	std::vector<bool> do_lsvd;
 	std::vector<int> n_vecs_keep;
+	std::vector<int> n_partitions;
         std::vector<IndexArray> block_sizes;
         std::vector<LinearSolverParamsBase> null_solver_params;
         enum { INVERT, INVARIANT_SPACE } purpose;

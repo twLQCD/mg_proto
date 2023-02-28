@@ -165,8 +165,22 @@ namespace MG {
 
 	//at this point we have the fine level null vecs (or evecs). So here is where we do the LSVD
 	//and keep the singular vectors corresponding to the largest singular values of the blocks
-	if (p.n_vecs_keep[0] != 0){
-	MasterLog(INFO, "MG Level 0: Performing SVD on Local Blocks");
+	if (p.do_psvd[0]){
+	MasterLog(INFO, "MG Level 0: Performing SVD on Local Blocks of partitioned near null vectors");
+	//int num_vecs_part = p.n_vecs[0] / p.n_partitions[0];
+	//std::vector<std::shared_ptr<SpinorT>> part_vecs;
+	//part_vecs.resize(num_vecs_part);
+	//for (int ipart = 0; ipart < p.n_partitions[0]; ipart++) {
+	//int min_vec_idx = ipart*p.n_vecs[0];
+	//int max_vec_idx = (ipart+1)*p.n_vecs[0]-1;
+	//part_vecs.insert(part_vecs.begin(), fine_level.null_vecs.begin() + min_vec_idx, fine_level.null_vecs.begin() + max_vec_idx);
+	//localSVD(part_vecs, fine_level.blocklist, p.n_vecs[0]);
+	//fine_level.null_vecs.insert(fine_level.null_vecs.begin() + min_vec_idx, part_vecs.begin(), part_vecs.end());
+	partitionedSVD(fine_level.null_vecs, fine_level.blocklist, p.n_partitions[0]);
+	}
+	//}
+	if (p.do_lsvd[0]) {
+	MasterLog(INFO, "MG Level 0: Performing SVD on Local Blocks of all near null vectors simulataneously.");
 	localSVD(fine_level.null_vecs, fine_level.blocklist, p.n_vecs_keep[0]);
 	}
 
