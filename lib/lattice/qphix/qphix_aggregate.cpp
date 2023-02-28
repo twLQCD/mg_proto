@@ -377,6 +377,82 @@ namespace MG {
         EigenToQPhixSpinorT(target, P, num_sites, block_sitelist, vec_idx);
     }
 
+    Eigen::MaxtrixXcd EigenLeastSquares(const Eigen::MatrixXcd &P, const Eigen::MatrixXcd &Pc, const Eigen::MatrixXcd &weights) {
+
+	    Eigen::MatrixXcd Pk = P * (weights * Pc.adjoint());
+	    Eigen::MatrixXcd Pj = Pc * (weights * Pc.adjoint());
+	    return Eigen::MatrixXcd Pnew = Pk * Pj.inverse();
+    }
+
+
+    //gather the vecs on the block, and do a least squares interpolation from the fine degrees of freedom to 
+    //the coarse degrees of freedom (read: least squares minimization of all lattice sites on a block to the 
+    //origin of the block
+    template <typename QS>
+    inline void leastSquaresInterpT(std::vector<std::shared_ptr<QS>> &vecs, const std::vector<Block> &block_list){
+
+	int num_blocks = block_list.size();
+	int num_vecs = vecs.size();
+#pragma omp parallel for
+        for (int block_id = 0; block_id < num_blocks; block_id++){
+		const Block &block = block_list[block_id];
+		auto block_sitelist = block.getCBSiteList();
+		int num_sites = block.getNumSites();
+
+		Eigen::MatrixXcd P(3*4*num_sites, num_vecs);
+		Eigen::MatrixXcd weights(num_vecs, num_vecs);
+		Eigen::MatrixXcd Pc(3*4, num_vecs);
+		Eigen::MatrixXcd Pnew(3*4*num_sites, 12);
+
+		for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs); curr_vec++){
+		
+		//gather the values of the near null vectors on the block into P
+		QPhiXSpinorToEigen(*(vecs[curr_vec]), P, num_sites, block_sitelist, static_cast<int>(curr_vec));
+		} //curr_vec
+
+	//do the svd
+	Eigen::JacobiSVD<Eigen::MatrixXcd> svd(P, Eigen::ComputeThinU);
+	//overwrite P with U
+	P = svd.matrixU();
+	weights = svd.singularValues().asDiagonal();
+
+	//fill up Pc with the values at the origin (first site)
+	for (int pcols = 0; prows < P.cols(); pcols++) {
+		for (int cs = 0; cs < 12; cs++) {
+			Pc(cs, pcols) = P(cs, pcols);
+		}
+	}
+
+	Pnew = eigenLeastSquares(P, Pc, weights);
+
+	if (block_id == 0) {
+		QDPIO::cout << "Singular values of block " << block_id << "  are :" << std::endl;
+		for (int j = 0; j < num_vecs; ++j){
+			QDPIO::cout << svd.singularValues()[j] << std::endl;
+		}
+	}
+
+	//now place them back in the vectors. P on the fine level will always be 12!!!
+	for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(12);  curr_vec++){
+
+	EigenToQPhiXSpinor(*(vecs[curr_vec]), P, num_sites, block_sitelist, static_cast<int>(curr_vec));
+	} //curr_vec
+
+    } //block_id
+
+    //resize the vectors to keep only the 12 from least squares
+    vecs.resize(12);
+
+    } //func
+
+    void leastSquaresInterp(std::vector<std::shared_ptr<QPhiXSpinor>> &vecs, const std::vector<Block> &block_list){
+	    leastSquaresInterpT(vecs, block_list);
+    }
+
+    void leastSquaresInterp(std::vector<std::shared_ptr<QPhiXSpinorF>> &vecs, const std::vector<Block> &block_list){
+	    leastSquaresInterpT(vecs, block_list);
+    }
+
     //gather the vecs belonging to each partition on the block
     //and do an svd on that partition
     template <typename QS>
