@@ -21,7 +21,7 @@
 #include <utils/print_utils.h>
 namespace MG {
 
-#define MAX_VECS 64
+#define MAX_VECS 96
 
     template <class QSpinor> class QPhiXTransfer {
     public:
@@ -366,6 +366,8 @@ namespace MG {
                 R_op<6>(fine_in, out);
             } else if (num_color == 8) {
                 R_op<8>(fine_in, out);
+            } else if (num_color == 12) {
+		R_op<12>(fine_in, out);
             } else if (num_color == 16) {
                 R_op<16>(fine_in, out);
             } else if (num_color == 24) {
@@ -380,6 +382,8 @@ namespace MG {
                 R_op<56>(fine_in, out);
             } else if (num_color == 64) {
                 R_op<64>(fine_in, out);
+            } else if (num_color == 96) {
+                R_op<96>(fine_in, source_cb, out);
             } else {
                 MasterLog(
                     ERROR,
@@ -395,6 +399,8 @@ namespace MG {
                 R_op<6>(fine_in, source_cb, out);
             } else if (num_color == 8) {
                 R_op<8>(fine_in, source_cb, out);
+            } else if (num_color == 12) {
+                R_op<12>(fine_in, source_cb, out);
             } else if (num_color == 16) {
                 R_op<16>(fine_in, source_cb, out);
             } else if (num_color == 24) {
@@ -409,6 +415,8 @@ namespace MG {
                 R_op<56>(fine_in, source_cb, out);
             } else if (num_color == 64) {
                 R_op<64>(fine_in, source_cb, out);
+            } else if (num_color == 96) {
+                R_op<96>(fine_in, source_cb, out);
             } else {
                 MasterLog(
                     ERROR,
@@ -693,6 +701,8 @@ namespace MG {
                 P_op<6>(coarse_in, fine_out);
             } else if (num_color == 8) {
                 P_op<8>(coarse_in, fine_out);
+            } else if (num_color == 12) {
+                P_op<12>(coarse_in, fine_out);
             } else if (num_color == 16) {
                 P_op<16>(coarse_in, fine_out);
             } else if (num_color == 24) {
@@ -707,6 +717,8 @@ namespace MG {
                 P_op<56>(coarse_in, fine_out);
             } else if (num_color == 64) {
                 P_op<64>(coarse_in, fine_out);
+            } else if (num_color == 96) {
+                P_op<96>(coarse_in, target_cb, fine_out);
             } else {
                 MasterLog(ERROR,
                           "Unhandled dispatch size %d. Num vecs must be divisible by 8 and <= 64",
@@ -722,6 +734,8 @@ namespace MG {
                 P_op<6>(coarse_in, target_cb, fine_out);
             } else if (num_color == 8) {
                 P_op<8>(coarse_in, target_cb, fine_out);
+            } else if (num_color == 12) {
+                P_op<12>(coarse_in, fine_out);
             } else if (num_color == 16) {
                 P_op<16>(coarse_in, target_cb, fine_out);
             } else if (num_color == 24) {
@@ -736,6 +750,8 @@ namespace MG {
                 P_op<56>(coarse_in, target_cb, fine_out);
             } else if (num_color == 64) {
                 P_op<64>(coarse_in, target_cb, fine_out);
+            } else if (num_color == 96) {
+                P_op<96>(coarse_in, target_cb, fine_out);
             } else {
                 MasterLog(ERROR,
                           "Unhandled dispatch size %d. Num vecs must be divisible by 8 and <= 64",
