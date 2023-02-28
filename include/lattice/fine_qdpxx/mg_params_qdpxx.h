@@ -28,6 +28,7 @@ namespace MG {
         std::vector<int> n_vecs;
 	std::vector<bool> do_psvd;
 	std::vector<bool> do_lsvd;
+	std::vector<bool> do_lsq;
 	std::vector<int> n_vecs_keep;
 	std::vector<int> n_partitions;
         std::vector<IndexArray> block_sizes;
