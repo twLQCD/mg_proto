@@ -383,7 +383,7 @@ namespace MG {
             } else if (num_color == 64) {
                 R_op<64>(fine_in, out);
             } else if (num_color == 96) {
-                R_op<96>(fine_in, source_cb, out);
+                R_op<96>(fine_in, out);
             } else {
                 MasterLog(
                     ERROR,
@@ -718,7 +718,7 @@ namespace MG {
             } else if (num_color == 64) {
                 P_op<64>(coarse_in, fine_out);
             } else if (num_color == 96) {
-                P_op<96>(coarse_in, target_cb, fine_out);
+                P_op<96>(coarse_in, fine_out);
             } else {
                 MasterLog(ERROR,
                           "Unhandled dispatch size %d. Num vecs must be divisible by 8 and <= 64",
@@ -735,7 +735,7 @@ namespace MG {
             } else if (num_color == 8) {
                 P_op<8>(coarse_in, target_cb, fine_out);
             } else if (num_color == 12) {
-                P_op<12>(coarse_in, fine_out);
+                P_op<12>(coarse_in, target_cb, fine_out);
             } else if (num_color == 16) {
                 P_op<16>(coarse_in, target_cb, fine_out);
             } else if (num_color == 24) {
