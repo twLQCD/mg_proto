@@ -377,11 +377,11 @@ namespace MG {
         EigenToQPhixSpinorT(target, P, num_sites, block_sitelist, vec_idx);
     }
 
-    Eigen::MaxtrixXcd EigenLeastSquares(const Eigen::MatrixXcd &P, const Eigen::MatrixXcd &Pc, const Eigen::MatrixXcd &weights) {
+    Eigen::MatrixXcd eigenLeastSquares(const Eigen::MatrixXcd &P, const Eigen::MatrixXcd &Pc, const Eigen::MatrixXcd &weights) {
 
 	    Eigen::MatrixXcd Pk = P * (weights * Pc.adjoint());
 	    Eigen::MatrixXcd Pj = Pc * (weights * Pc.adjoint());
-	    return Eigen::MatrixXcd Pnew = Pk * Pj.inverse();
+	    return Pk * Pj.inverse();
     }
 
 

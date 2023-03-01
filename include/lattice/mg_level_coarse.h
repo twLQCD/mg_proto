@@ -123,7 +123,8 @@ namespace MG {
 	localSVD(fine_level.null_vecs, fine_level.blocklist, p.n_vecs_keep[fine_level_id]);
 	}
 	if (p.do_lsq[fine_level_id] && p.do_lsq[0]) {
-	MasterLOG(INFO, "MG Level %d: Performing SVD followed by Least Squares Interpolation on Local Blocks of all near null vectors", fine_level_id);	       leastSquaresInterp(fine_level.null_vecs, fine_level.blocklist);
+	MasterLog(INFO, "MG Level %d: Performing SVD followed by Least Squares Interpolation on Local Blocks of all near null vectors", fine_level_id);	       
+	leastSquaresInterp(fine_level.null_vecs, fine_level.blocklist);
 	}
 
         // Orthonormalize the vectors -- I heard once that for GS stability is improved

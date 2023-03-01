@@ -325,11 +325,12 @@ namespace MG {
 
     }
 
-    Eigen::MaxtrixXcd EigenLeastSquares(const Eigen::MatrixXcd &P, const Eigen::MatrixXcd &Pc, const Eigen::MatrixXcd &weights) {
+    Eigen::MatrixXcf eigenLeastSquaresCoarse(const Eigen::MatrixXcf &P, const Eigen::MatrixXcf &Pc, const Eigen::MatrixXcf &weights) {
 
-	Eigen::MatrixXcd Pk = P * (weights * Pc.adjoint());
-	Eigen::MatrixXcd Pj = Pc * (weights * Pc.adjoint());
-	return Eigen::MatrixXcd Pnew = Pk * Pj.inverse();
+	Eigen::MatrixXcf Pk = P * (weights * Pc.adjoint());
+	Eigen::MatrixXcf Pj = Pc * (weights * Pc.adjoint());
+	//Eigen::MatrixXcf Pnew(P.rows(), P.cols());
+	return Pk * Pj.inverse();
     }
 
 
@@ -364,7 +365,7 @@ namespace MG {
 		Eigen::JacobiSVD<Eigen::MatrixXcf> svd(P, ComputeThinU);
 		//overwrite P with U
 		P = svd.matrixU();
-		weights = svd.SingularValues().asDiagonal();
+		weights = svd.singularValues().asDiagonal();
 		for (int pcols = 0; pcols < P.cols(); pcols++){
 			for (int cs = 0; cs < dims.n; cs++){
 				Pc(cs, pcols) = P(cs, pcols);
