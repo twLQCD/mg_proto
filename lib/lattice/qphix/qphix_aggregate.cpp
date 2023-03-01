@@ -17,6 +17,8 @@
 
 //for local SVD
 #include <Eigen/SVD>
+//for inverse
+#include <Eigen/Dense>
 
 namespace MG {
 
@@ -380,7 +382,8 @@ namespace MG {
     Eigen::MatrixXcd eigenLeastSquares(const Eigen::MatrixXcd &P, const Eigen::MatrixXcd &Pc, const Eigen::MatrixXcd &weights) {
 
 	    Eigen::MatrixXcd Pk = P * (weights * Pc.adjoint());
-	    Eigen::MatrixXcd Pj = Pc * (weights * Pc.adjoint());
+            Eigen::MatrixXcd Pj(Pc.rows(), Pc.rows());
+	    Pj = Pc * (weights * Pc.adjoint());
 	    return Pk * Pj.inverse();
     }
 

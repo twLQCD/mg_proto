@@ -122,7 +122,7 @@ namespace MG {
 	MasterLog(INFO, "Performing SVD of Local Blocks on Level %d for all partitions of the near null vectors",fine_level_id);
 	localSVD(fine_level.null_vecs, fine_level.blocklist, p.n_vecs_keep[fine_level_id]);
 	}
-	if (p.do_lsq[fine_level_id] && p.do_lsq[0]) {
+	if (p.do_lsq[fine_level_id] && p.do_lsq[fine_level_id]) {
 	MasterLog(INFO, "MG Level %d: Performing SVD followed by Least Squares Interpolation on Local Blocks of all near null vectors", fine_level_id);	       
 	leastSquaresInterp(fine_level.null_vecs, fine_level.blocklist);
 	}

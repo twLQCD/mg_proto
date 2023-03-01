@@ -328,7 +328,8 @@ namespace MG {
     Eigen::MatrixXcf eigenLeastSquaresCoarse(const Eigen::MatrixXcf &P, const Eigen::MatrixXcf &Pc, const Eigen::MatrixXcf &weights) {
 
 	Eigen::MatrixXcf Pk = P * (weights * Pc.adjoint());
-	Eigen::MatrixXcf Pj = Pc * (weights * Pc.adjoint());
+	Eigen::MatrixXcf Pj(Pc.rows(), Pc.rows());
+	Pj = Pc * (weights * Pc.adjoint());
 	//Eigen::MatrixXcf Pnew(P.rows(), P.cols());
 	return Pk * Pj.inverse();
     }
