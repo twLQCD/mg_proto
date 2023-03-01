@@ -325,6 +325,75 @@ namespace MG {
 
     }
 
+    Eigen::MaxtrixXcd EigenLeastSquares(const Eigen::MatrixXcd &P, const Eigen::MatrixXcd &Pc, const Eigen::MatrixXcd &weights) {
+
+	Eigen::MatrixXcd Pk = P * (weights * Pc.adjoint());
+	Eigen::MatrixXcd Pj = Pc * (weights * Pc.adjoint());
+	return Eigen::MatrixXcd Pnew = Pk * Pj.inverse();
+    }
+
+
+    void leastSquaresInterp(std::vector<std::shared_ptr<CoarseSpinor>> &vecs, const std::vector<Block> &block_list){
+
+	int num_blocks = block_list.size();
+	int num_vecs = vecs.size();
+	IndexType idx = 0;
+	EigenDims_t dims = returnMatDims(*(vecs[idx]), num_vecs);
+	
+#pragma omp parallel for
+	for (int block_id = 0; block_id < num_blocks; block_id++){
+	
+	const Block &block = block_list[block_id];
+	std::vector<CBSite> block_sitelist = block.getCBSiteList();
+	int num_sites = block.getNumSites();
+
+
+	Eigen::MatrixXcf P(dims.n * num_sites, dims.m);
+	Eigen::MatrixXcf Pc(dims.n, dims.m);
+	Eigen::MatrixXcf Pnew(dims.n * num_sites, dims.m);
+	Eigen::MatrixXcf weights(dims.n, dims.n);
+
+		for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs); ++curr_vec){
+
+		SpinorToEigen(*(vecs[curr_vec]), P, num_sites, block_sitelist, static_cast<int>(curr_vec));
+
+
+		} //curr_vec
+
+		//the vectors on the blocks now in P, so do the svd, only need U
+		Eigen::JacobiSVD<Eigen::MatrixXcf> svd(P, ComputeThinU);
+		//overwrite P with U
+		P = svd.matrixU();
+		weights = svd.SingularValues().asDiagonal();
+		for (int pcols = 0; pcols < P.cols(); pcols++){
+			for (int cs = 0; cs < dims.n; cs++){
+				Pc(cs, pcols) = P(cs, pcols);
+			}
+		}
+
+		Pnew = eigenLeastSquaresCoarse(P, Pc, weights);
+
+		//now place them back in the vectors, keeping the ones corresponding to the largest singular values of the block. 
+		//The singular vectors U_i are sorted largest to smallest already in Eigen
+		//vecs.resize(k_c);
+		for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(dims.n); curr_vec++){
+
+			EigenToSpinor(*(vecs[curr_vec]), Pnew, num_sites, block_sitelist, static_cast<int>(curr_vec));
+			}
+
+        	if (block_id == 0) {
+                MasterLog(INFO, "Printing Singular Values of block 0 on coarse grid...");
+                for (int j = 0; j < num_vecs; ++j){
+                        MasterLog(INFO, "%f", svd.singularValues()[j]);
+                }
+       		}	
+
+	} //block_id
+
+    vecs.resize(dims.n);
+
+    }
+
     void partitionedSVD(std::vector<std::shared_ptr<CoarseSpinor>> &vecs, const std::vector<Block> &block_list,
 		                      const int &num_part) {
 

@@ -118,9 +118,12 @@ namespace MG {
 	partitionedSVD(fine_level.null_vecs, fine_level.blocklist, p.n_partitions[fine_level_id]);
 	}
 	//do the svd on all partitions simultaneously
-	if (p.do_lsvd[fine_level_id]){
+	if (p.do_lsvd[fine_level_id] && !p.do_lsq[fine_level_id]){
 	MasterLog(INFO, "Performing SVD of Local Blocks on Level %d for all partitions of the near null vectors",fine_level_id);
 	localSVD(fine_level.null_vecs, fine_level.blocklist, p.n_vecs_keep[fine_level_id]);
+	}
+	if (p.do_lsq[fine_level_id] && p.do_lsq[0]) {
+	MasterLOG(INFO, "MG Level %d: Performing SVD followed by Least Squares Interpolation on Local Blocks of all near null vectors", fine_level_id);	       leastSquaresInterp(fine_level.null_vecs, fine_level.blocklist);
 	}
 
         // Orthonormalize the vectors -- I heard once that for GS stability is improved

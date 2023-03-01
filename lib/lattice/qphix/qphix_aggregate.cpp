@@ -417,7 +417,7 @@ namespace MG {
 	weights = svd.singularValues().asDiagonal();
 
 	//fill up Pc with the values at the origin (first site)
-	for (int pcols = 0; prows < P.cols(); pcols++) {
+	for (int pcols = 0; pcols < P.cols(); pcols++) {
 		for (int cs = 0; cs < 12; cs++) {
 			Pc(cs, pcols) = P(cs, pcols);
 		}
@@ -435,7 +435,7 @@ namespace MG {
 	//now place them back in the vectors. P on the fine level will always be 12!!!
 	for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(12);  curr_vec++){
 
-	EigenToQPhiXSpinor(*(vecs[curr_vec]), P, num_sites, block_sitelist, static_cast<int>(curr_vec));
+	EigenToQPhiXSpinor(*(vecs[curr_vec]), Pnew, num_sites, block_sitelist, static_cast<int>(curr_vec));
 	} //curr_vec
 
     } //block_id
