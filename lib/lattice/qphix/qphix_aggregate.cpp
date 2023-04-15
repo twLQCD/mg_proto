@@ -19,6 +19,7 @@
 #include <Eigen/SVD>
 //for inverse
 #include <Eigen/Dense>
+#include <Eigen/Core>
 
 namespace MG {
 
@@ -347,6 +348,28 @@ namespace MG {
 
      }
 
+    template <typename QS>
+    inline void QPhiXSpinorToEigenT(const QS &src, Eigen::MatrixXcd &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx, const int &aggr) {
+	const int min_cspin = aggr == 0 ? 0 : 2;
+	const int max_cspin = aggr == 0 ? 2 : 4;
+	
+        for (int site = 0; site < num_sites; ++site){
+        const CBSite &cbsite = block_sitelist[site];
+#pragma omp parallel for collapse(2)
+                for (int spin = min_cspin; spin < max_cspin; ++spin) {
+			//int aux_spin = spin == 0 || spin == 2 ? 0 : 1
+                        for (int color = 0; color < 3; ++color) {
+			 int aux_spin = (spin == 0 || spin == 2) ? 0 : 1;
+                         P(color + 3*aux_spin + 6*site, vec_idx) = std::complex<double>(src(0, cbsite.cb, cbsite.site, spin, color, RE), src(0, cbsite.cb, cbsite.site, spin, color, IM));
+			//count++;
+                        }
+                }
+        }
+
+
+     }
+
+
     void QPhiXSpinorToEigen(const QPhiXSpinor &target, Eigen::MatrixXcd &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx) {
 	QPhiXSpinorToEigenT(target, P, num_sites, block_sitelist, vec_idx);
     }
@@ -354,6 +377,15 @@ namespace MG {
     void QPhiXSpinorToEigen(const QPhiXSpinorF &target, Eigen::MatrixXcd &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx) {
         QPhiXSpinorToEigenT(target, P, num_sites, block_sitelist, vec_idx);
     }
+
+    void QPhiXSpinorToEigen(const QPhiXSpinor &target, Eigen::MatrixXcd &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx, const int &aggr) {
+        QPhiXSpinorToEigenT(target, P, num_sites, block_sitelist, vec_idx, aggr);
+    }
+
+    void QPhiXSpinorToEigen(const QPhiXSpinorF &target, Eigen::MatrixXcd &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx, const int &aggr) {
+        QPhiXSpinorToEigenT(target, P, num_sites, block_sitelist, vec_idx, aggr);
+    }
+
 
     template <typename QS>
     inline void EigenToQPhixSpinorT(QS &target, const Eigen::MatrixXcd &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx){
@@ -371,6 +403,29 @@ namespace MG {
 
     }
 
+    template <typename QS>
+    inline void EigenToQPhixSpinorT(QS &target, const Eigen::MatrixXcd &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx, const int &aggr){
+
+	const int min_cspin = aggr == 0 ? 0 : 2;
+	const int max_cspin = aggr == 0 ? 2 : 4;
+        for (int site = 0; site < num_sites; ++site){
+        const CBSite &cbsite = block_sitelist[site];
+#pragma omp parallel for collapse(2)
+		//int count = 0;
+                for (int spin = min_cspin; spin < max_cspin; ++spin){
+			//int aux_spin = spin == 0 || spin == 2 ? 0 : 1
+                        for (int color = 0; color < 3; color++){
+			int aux_spin = (spin == 0 || spin == 2) ? 0 : 1;
+                        target(0, cbsite.cb, cbsite.site, spin, color, RE) = P(color + 3*aux_spin + 6*site, vec_idx).real();
+                        target(0, cbsite.cb, cbsite.site, spin, color, IM) = P(color + 3*aux_spin + 6*site, vec_idx).imag();
+			//count++;
+                        }
+                }
+        }
+
+    }
+
+
     void EigenToQPhiXSpinor(QPhiXSpinor &target, const Eigen::MatrixXcd &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx) {
         EigenToQPhixSpinorT(target, P, num_sites, block_sitelist, vec_idx);
     }
@@ -378,6 +433,15 @@ namespace MG {
     void EigenToQPhiXSpinor(QPhiXSpinorF &target, const Eigen::MatrixXcd &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx) {
         EigenToQPhixSpinorT(target, P, num_sites, block_sitelist, vec_idx);
     }
+
+    void EigenToQPhiXSpinor(QPhiXSpinor &target, const Eigen::MatrixXcd &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx, const int &aggr) {
+        EigenToQPhixSpinorT(target, P, num_sites, block_sitelist, vec_idx, aggr);
+    }
+
+    void EigenToQPhiXSpinor(QPhiXSpinorF &target, const Eigen::MatrixXcd &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx, const int &aggr) {
+        EigenToQPhixSpinorT(target, P, num_sites, block_sitelist, vec_idx, aggr);
+    }
+
 
     Eigen::MatrixXcd eigenLeastSquares(const Eigen::MatrixXcd &P, const Eigen::MatrixXcd &Pc, const Eigen::MatrixXcd &weights) {
 
@@ -396,6 +460,7 @@ namespace MG {
 
 	int num_blocks = block_list.size();
 	int num_vecs = vecs.size();
+	QDPIO::cout << "The number of near null vectors is " << num_vecs << std::endl;
 #pragma omp parallel for
         for (int block_id = 0; block_id < num_blocks; block_id++){
 		const Block &block = block_list[block_id];
@@ -403,9 +468,11 @@ namespace MG {
 		int num_sites = block.getNumSites();
 
 		Eigen::MatrixXcd P(3*4*num_sites, num_vecs);
-		Eigen::MatrixXcd weights(num_vecs, num_vecs);
-		Eigen::MatrixXcd Pc(3*4, num_vecs);
+		//Eigen::MatrixXcd weights(12, 12);
+		Eigen::MatrixXcd weights=Eigen::MatrixXcd::Zero(12,12);
+		Eigen::MatrixXcd Pc(3*4, 12);
 		Eigen::MatrixXcd Pnew(3*4*num_sites, 12);
+		Eigen::MatrixXcd Psvd(12*num_sites,12);
 
 		for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs); curr_vec++){
 		
@@ -417,16 +484,24 @@ namespace MG {
 	Eigen::JacobiSVD<Eigen::MatrixXcd> svd(P, Eigen::ComputeThinU);
 	//overwrite P with U
 	P = svd.matrixU();
-	weights = svd.singularValues().asDiagonal();
-
+	for (int i = 0; i < 12; ++i){
+	//weights = svd.singularValues().asDiagonal();
+	weights(i,i) = svd.singularValues()[i];
+	}
 	//fill up Pc with the values at the origin (first site)
-	for (int pcols = 0; pcols < P.cols(); pcols++) {
+	for (int pcols = 0; pcols < Pc.cols(); pcols++) {
 		for (int cs = 0; cs < 12; cs++) {
 			Pc(cs, pcols) = P(cs, pcols);
 		}
 	}
+	//fill up Psvd with the vectors of the first 12 singular vectors
+	for (int pcols = 0; pcols < 12; pcols++){
+		for (int cs = 0; cs < 12*num_sites; cs++){
+			Psvd(cs,pcols) = P(cs,pcols);
+		}
+	}
 
-	Pnew = eigenLeastSquares(P, Pc, weights);
+	Pnew = eigenLeastSquares(Psvd, Pc, weights);
 
 	if (block_id == 0) {
 		QDPIO::cout << "Singular values of block " << block_id << "  are :" << std::endl;
@@ -498,6 +573,56 @@ namespace MG {
 
     } //func
 
+    template <typename QS>
+    inline void partitionedChiralSVDT(std::vector<std::shared_ptr<QS>> &vecs, const std::vector<Block> &block_list,
+                                              const int &num_part){
+    int num_blocks = block_list.size();
+    for (int ipart = 0; ipart < num_part; ipart++) {
+    int num_vecs = (int)vecs.size() / num_part;
+    int max_vec_id = (ipart+1)*num_vecs;
+    int min_vec_id = ipart*num_vecs;
+    std::vector<std::shared_ptr<QS>> part_vecs(vecs.begin() + min_vec_id, vecs.begin() + max_vec_id);
+
+#pragma omp parallel for
+    for (int block_id = 0; block_id < num_blocks; block_id++){
+    const Block &block = block_list[block_id];
+    auto block_sitelist = block.getCBSiteList();
+    int num_sites = block.getNumSites();
+    Eigen::MatrixXcd Pp(6*num_sites, num_vecs);
+    Eigen::MatrixXcd Pm(6*num_sites, num_vecs);
+
+                    for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs); curr_vec++){
+                        QPhiXSpinorToEigen(*(part_vecs[curr_vec]), Pp, num_sites, block_sitelist, static_cast<int>(curr_vec), 0);
+			QPhiXSpinorToEigen(*(part_vecs[curr_vec]), Pm, num_sites, block_sitelist, static_cast<int>(curr_vec), 1);
+
+                    } //curr_vec
+
+                    Eigen::JacobiSVD<Eigen::MatrixXcd> svdp(Pp, Eigen::ComputeThinU);
+		    Eigen::JacobiSVD<Eigen::MatrixXcd> svdm(Pm, Eigen::ComputeThinU);
+                    Pp = svdp.matrixU();
+		    Pm = svdm.matrixU();
+                    if (block_id == 0) {
+                    QDPIO::cout << "Singular values of positive parity block " << block_id << " on partition " << ipart << "  are :" << std::endl;
+                    for (int j = 0; j < num_vecs; ++j){
+                            QDPIO::cout << svdp.singularValues()[j] << std::endl;
+                    }
+                    QDPIO::cout << "Singular values of negative parity block " << block_id << " on partition " << ipart << "  are :" << std::endl;
+                    for (int j = 0; j < num_vecs; ++j){
+                            QDPIO::cout << svdm.singularValues()[j] << std::endl;
+                    }
+                    }
+                    for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs); curr_vec++){
+                    EigenToQPhiXSpinor(*(part_vecs[curr_vec]), Pp, num_sites, block_sitelist, static_cast<int>(curr_vec), 0);
+		    EigenToQPhiXSpinor(*(part_vecs[curr_vec]), Pm, num_sites, block_sitelist, static_cast<int>(curr_vec), 1);
+                    }
+            } //block_id
+    //is below vecs.begin() + min_vec_id or vecs.begin() + min_vec_id + 1??
+    std::copy(part_vecs.begin(), part_vecs.end(), vecs.begin() + min_vec_id);
+    } //ipart
+
+    } //func
+
+
     void partitionedSVD(std::vector<std::shared_ptr<QPhiXSpinor>> &vecs, const std::vector<Block> &block_list, const int &num_part){
 	    partitionedSVDT(vecs, block_list, num_part);
     }
@@ -505,6 +630,14 @@ namespace MG {
     void partitionedSVD(std::vector<std::shared_ptr<QPhiXSpinorF>> &vecs, const std::vector<Block> &block_list, const int &num_part){
 	                partitionedSVDT(vecs, block_list, num_part);
     } 
+
+    void partitionedChiralSVD(std::vector<std::shared_ptr<QPhiXSpinor>> &vecs, const std::vector<Block> &block_list, const int &num_part){
+            partitionedChiralSVDT(vecs, block_list, num_part);
+    }
+
+    void partitionedChiralSVD(std::vector<std::shared_ptr<QPhiXSpinorF>> &vecs, const std::vector<Block> &block_list, const int &num_part){
+                        partitionedChiralSVDT(vecs, block_list, num_part);
+    }
 
     //gather the vecs on the block, and do an SVD of the block
     template <typename QS>
@@ -551,6 +684,63 @@ namespace MG {
 
     }
 
+    //gather the vecs on the block, and do an SVD of the block
+    template <typename QS>
+    inline void chiralSVDT(std::vector<std::shared_ptr<QS>> &vecs, const std::vector<Block> &block_list,
+                          const int &k_f){
+
+        int num_blocks = block_list.size();
+        int num_vecs = vecs.size();
+#pragma omp parallel for
+        for (int block_id = 0; block_id < num_blocks; block_id++){
+                const Block &block = block_list[block_id];
+                auto block_sitelist = block.getCBSiteList();
+                int num_sites = block.getNumSites();
+
+                Eigen::MatrixXcd Pp(6*num_sites, num_vecs);
+		Eigen::MatrixXcd Pm(6*num_sites, num_vecs);
+
+                for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs); curr_vec++){
+
+                QPhiXSpinorToEigen(*(vecs[curr_vec]), Pp, num_sites, block_sitelist, static_cast<int>(curr_vec), 0);
+		QPhiXSpinorToEigen(*(vecs[curr_vec]), Pm, num_sites, block_sitelist, static_cast<int>(curr_vec), 1);
+
+                } //curr_vec
+
+        Eigen::JacobiSVD<Eigen::MatrixXcd> svdp(Pp, Eigen::ComputeThinU);
+	Eigen::JacobiSVD<Eigen::MatrixXcd> svdm(Pm, Eigen::ComputeThinU);
+        //overwrite P with U
+        Pp = svdp.matrixU();
+	Pm = svdm.matrixU();
+
+        if (block_id == 0) {
+                QDPIO::cout << "Singular values of positive parity block " << block_id << "  are :" << std::endl;
+                for (int j = 0; j < num_vecs; ++j){
+                        QDPIO::cout << svdp.singularValues()[j] << std::endl;
+                }
+                QDPIO::cout << "Singular values of negative parity block " << block_id << "  are :" << std::endl;
+                for (int j = 0; j < num_vecs; ++j){
+                        QDPIO::cout << svdm.singularValues()[j] << std::endl;
+                }
+
+        }
+
+        //now place them back in the vectors, keeping the ones correspoding to the largest singular values. The singular vectors U_i are sorted largest to smallest in Eigen
+        //vecs.resize(k_f);
+        for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs);  curr_vec++){
+
+        EigenToQPhiXSpinor(*(vecs[curr_vec]), Pp, num_sites, block_sitelist, static_cast<int>(curr_vec), 0);
+	EigenToQPhiXSpinor(*(vecs[curr_vec]), Pm, num_sites, block_sitelist, static_cast<int>(curr_vec), 1);
+
+        } //curr_vec
+
+    } //block_id
+
+    vecs.resize(k_f);
+
+    }
+
+
     void localSVD(std::vector<std::shared_ptr<QPhiXSpinor>> &vecs, const std::vector<Block> &block_list,
 		  const int &k_f){
   	localSVDT(vecs, block_list, k_f);
@@ -560,6 +750,17 @@ namespace MG {
 		  const int &k_f){
 	localSVDT(vecs, block_list, k_f);
     }
+
+    void chiralSVD(std::vector<std::shared_ptr<QPhiXSpinor>> &vecs, const std::vector<Block> &block_list,
+                  const int &k_f){
+        chiralSVDT(vecs, block_list, k_f);
+    }
+
+    void chiralSVD(std::vector<std::shared_ptr<QPhiXSpinorF>> &vecs, const std::vector<Block> &block_list,
+                  const int &k_f){
+        chiralSVDT(vecs, block_list, k_f);
+    }
+
 
     //! 'Restrict' a QDP++ spinor to a CoarseSpinor with the same geometry
     template <typename QS>

@@ -165,17 +165,21 @@ namespace MG {
 	//and keep the singular vectors corresponding to the largest singular values of the blocks
 	if (p.do_psvd[0]){
 	MasterLog(INFO, "MG Level 0: Performing SVD on Local Blocks of partitioned near null vectors");
-	partitionedSVD(fine_level.null_vecs, fine_level.blocklist, p.n_partitions[0]);
+	partitionedChiralSVD(fine_level.null_vecs, fine_level.blocklist, p.n_partitions[0]);
+        //orthonormalizeBlockAggregates(fine_level.null_vecs, fine_level.blocklist);
+        //orthonormalizeBlockAggregates(fine_level.null_vecs, fine_level.blocklist);
 	}
 	//to keep it from doing a local svd, then a local svd again during least squares process
 	if (p.do_lsvd[0] && !p.do_lsq[0]) {
 	MasterLog(INFO, "MG Level 0: Performing SVD on Local Blocks of all near null vectors simulataneously.");
-	localSVD(fine_level.null_vecs, fine_level.blocklist, p.n_vecs_keep[0]);
+	chiralSVD(fine_level.null_vecs, fine_level.blocklist, p.n_vecs_keep[0]);
 	}
 	if (p.do_lsvd[0] && p.do_lsq[0]) {
 	MasterLog(INFO, "MG Level 0: Performing SVD followed by Least Squares Interpolation on Local Blocks of all near null vectors");
 	leastSquaresInterp(fine_level.null_vecs, fine_level.blocklist);
-	}
+        orthonormalizeBlockAggregates(fine_level.null_vecs, fine_level.blocklist);
+        orthonormalizeBlockAggregates(fine_level.null_vecs, fine_level.blocklist);
+	} else {
 
         // Orthonormalize the vectors -- I heard once that for GS stability is improved
         // if you do it twice.
@@ -184,6 +188,7 @@ namespace MG {
         orthonormalizeBlockAggregates(fine_level.null_vecs, fine_level.blocklist);
 
         orthonormalizeBlockAggregates(fine_level.null_vecs, fine_level.blocklist);
+	}
 
 	//now have a different number of near null vectors (potentially) so change
 	//num_vecs to be equal to the number of near null vectors

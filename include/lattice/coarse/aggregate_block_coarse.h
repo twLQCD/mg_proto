@@ -56,6 +56,13 @@ namespace MG {
     void localSVD(std::vector<std::shared_ptr<CoarseSpinor>> &vecs,
 	          const std::vector<Block> &block_list, const int &k_c);
 
+
+    void chiralSVD(std::vector<std::shared_ptr<CoarseSpinor>> &vecs,
+                  const std::vector<Block> &block_list, const int &k_c);
+
+   void partitionedChiralSVD(std::vector<std::shared_ptr<CoarseSpinor>> &vecs,
+                  const std::vector<Block> &block_list, const int &num_part);
+
     //! 'Restrict' a QDP++ spinor to a CoarseSpinor with the same geometry
     void restrictSpinor(const std::vector<Block> &blocklist,
                         const std::vector<std::shared_ptr<CoarseSpinor>> &v,

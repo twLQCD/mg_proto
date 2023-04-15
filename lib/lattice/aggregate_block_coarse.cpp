@@ -303,6 +303,31 @@ namespace MG {
 
     }
 
+    void SpinorToEigen(const CoarseSpinor &src, Eigen::MatrixXcf &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx, const int aggr){
+
+        const int num_color = src.GetNumColor();
+        const LatticeInfo &info = src.GetInfo();
+        const int n_per_chiral = (info.GetNumSpins() == 4) ? 2 * num_color : num_color;
+	const int min_cspin = aggr * n_per_chiral;
+	const int max_cspin = (aggr + 1) * n_per_chiral;
+
+        for (int site = 0; site < num_sites; ++site){
+
+        const CBSite &cbsite = block_sitelist[site];
+        const float *src_site_data = src.GetSiteDataPtr(0, cbsite.cb, cbsite.site);
+        int count = 0;
+#pragma omp simd
+                for (int colorspin = min_cspin; colorspin < max_cspin; ++colorspin){
+
+                P(count + n_per_chiral*site, vec_idx) = std::complex<float>(src_site_data[RE + n_complex * colorspin], src_site_data[IM + n_complex * colorspin]);
+		count++;
+                } //colorspin
+        }
+
+
+    }
+
+
     void EigenToSpinor(CoarseSpinor &target, const Eigen::MatrixXcf &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx){
 
       const int num_color = target.GetNumColor();
@@ -325,6 +350,30 @@ namespace MG {
 
     }
 
+    void EigenToSpinor(CoarseSpinor &target, const Eigen::MatrixXcf &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx, const int aggr){
+
+      const int num_color = target.GetNumColor();
+      const LatticeInfo &info = target.GetInfo();
+      const int n_per_chiral = (info.GetNumSpins() == 4) ? 2 * num_color : num_color;
+      const int min_cspin = aggr * n_per_chiral;
+      const int max_cspin = (aggr+1) * n_per_chiral;
+
+      for (int site = 0; site < num_sites; ++site){
+      const CBSite &cbsite = block_sitelist[site];
+      float *target_site_data = target.GetSiteDataPtr(0, cbsite.cb, cbsite.site);
+      int count = 0;
+#pragma omp simd
+           for (int colorspin = min_cspin; colorspin < max_cspin; ++colorspin){
+
+           target_site_data[RE + n_complex * colorspin] = P(count + n_per_chiral*site, vec_idx).real();
+           target_site_data[IM + n_complex * colorspin] = P(count + n_per_chiral*site, vec_idx).imag();
+	   count++;
+           }
+
+           }
+
+    }
+
     Eigen::MatrixXcf eigenLeastSquaresCoarse(const Eigen::MatrixXcf &P, const Eigen::MatrixXcf &Pc, const Eigen::MatrixXcf &weights) {
 
 	Eigen::MatrixXcf Pk = P * (weights * Pc.adjoint());
@@ -341,7 +390,8 @@ namespace MG {
 	int num_vecs = vecs.size();
 	IndexType idx = 0;
 	EigenDims_t dims = returnMatDims(*(vecs[idx]), num_vecs);
-	
+	MasterLog(INFO, "The number of near null vectors on coarse level is %d", num_vecs);
+	MasterLog(INFO, "Dimensions of Eigen matrices are %d x %d",dims.n,dims.m);	
 #pragma omp parallel for
 	for (int block_id = 0; block_id < num_blocks; block_id++){
 	
@@ -351,9 +401,11 @@ namespace MG {
 
 
 	Eigen::MatrixXcf P(dims.n * num_sites, dims.m);
-	Eigen::MatrixXcf Pc(dims.n, dims.m);
-	Eigen::MatrixXcf Pnew(dims.n * num_sites, dims.m);
-	Eigen::MatrixXcf weights(dims.n, dims.n);
+	Eigen::MatrixXcf Pc(dims.n, dims.n);
+	Eigen::MatrixXcf Pnew(dims.n * num_sites, dims.n);
+	//Eigen::MatrixXcf weights(dims.m, dims.m);
+	Eigen::MatrixXcf weights = Eigen::MatrixXcf::Zero(dims.n, dims.n);
+	Eigen::MatrixXcf Psvd(dims.n * num_sites ,dims.n);
 
 		for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs); ++curr_vec){
 
@@ -366,14 +418,21 @@ namespace MG {
 		Eigen::JacobiSVD<Eigen::MatrixXcf> svd(P, ComputeThinU);
 		//overwrite P with U
 		P = svd.matrixU();
-		weights = svd.singularValues().asDiagonal();
-		for (int pcols = 0; pcols < P.cols(); pcols++){
+		//weights = svd.singularValues().asDiagonal();
+		for (int i = 0; i < dims.n; ++i){weights(i,i) = svd.singularValues()[i];};
+		for (int pcols = 0; pcols < Pc.cols(); pcols++){
 			for (int cs = 0; cs < dims.n; cs++){
 				Pc(cs, pcols) = P(cs, pcols);
 			}
 		}
 
-		Pnew = eigenLeastSquaresCoarse(P, Pc, weights);
+		for (int pcols = 0; pcols < dims.n; pcols++){
+			for (int cs = 0; cs < dims.n * num_sites; ++cs){
+				Psvd(cs,pcols) = P(cs,pcols);
+			}
+		}
+
+		Pnew = eigenLeastSquaresCoarse(Psvd, Pc, weights);
 
 		//now place them back in the vectors, keeping the ones corresponding to the largest singular values of the block. 
 		//The singular vectors U_i are sorted largest to smallest already in Eigen
@@ -441,6 +500,61 @@ namespace MG {
 
     } //end func
 
+    void partitionedChiralSVD(std::vector<std::shared_ptr<CoarseSpinor>> &vecs, const std::vector<Block> &block_list,
+                                      const int &num_part) {
+
+    int num_blocks = block_list.size();
+    for (int ipart = 0; ipart < num_part; ipart++) {
+    int num_vecs = (int)vecs.size() / num_part;
+    int max_vec_id = (ipart+1)*num_vecs;
+    int min_vec_id = ipart*num_vecs;
+    IndexType idx = 0;
+    std::vector<std::shared_ptr<CoarseSpinor>> part_vecs(vecs.begin() + min_vec_id, vecs.begin() + max_vec_id);
+    EigenDims_t dims = returnMatDims(*(vecs[idx]), num_vecs);
+
+#pragma omp parallel for
+    for (int block_id = 0; block_id < num_blocks; block_id++){
+
+        const Block &block = block_list[block_id];
+        std::vector<CBSite> block_sitelist = block.getCBSiteList();
+        int num_sites = block.getNumSites();
+        Eigen::MatrixXcf Pp((dims.n/2) * num_sites, dims.m);
+	Eigen::MatrixXcf Pm((dims.n/2) * num_sites, dims.m);
+
+                for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs); curr_vec++){
+
+                SpinorToEigen(*(part_vecs[curr_vec]), Pp, num_sites, block_sitelist, static_cast<int>(curr_vec), 0);
+		SpinorToEigen(*(part_vecs[curr_vec]), Pm, num_sites, block_sitelist, static_cast<int>(curr_vec), 1);
+                } //curr_vec
+
+                Eigen::JacobiSVD<Eigen::MatrixXcf> svdp(Pp, ComputeThinU);
+		Eigen::JacobiSVD<Eigen::MatrixXcf> svdm(Pm, ComputeThinU);
+                Pp = svdp.matrixU();
+		Pm = svdm.matrixU();
+
+                if (block_id == 0) {
+                MasterLog(INFO, "Printing Singular Values of positive partity block 0 on coarse grid for partition number %d", ipart);
+                for (int j = 0; j < num_vecs; ++j){
+                MasterLog(INFO, "%f", svdp.singularValues()[j]);
+                }
+                MasterLog(INFO, "Printing Singular Values of negative partity block 0 on coarse grid for partition number %d", ipart);
+                for (int j = 0; j < num_vecs; ++j){
+                MasterLog(INFO, "%f", svdm.singularValues()[j]);
+                }
+                }
+                for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs); curr_vec++){
+                EigenToSpinor(*(part_vecs[curr_vec]), Pp, num_sites, block_sitelist, static_cast<int>(curr_vec), 0);
+		EigenToSpinor(*(part_vecs[curr_vec]), Pm, num_sites, block_sitelist, static_cast<int>(curr_vec), 1);
+                }
+        } //block_id
+    //is below vecs.begin() + min_vec_id or vecs.begin() + min_vec_id + 1??
+    std::copy(part_vecs.begin(), part_vecs.end(), vecs.begin() + min_vec_id);
+    } //ipart
+
+
+    } //end func
+
+
     void localSVD(std::vector<std::shared_ptr<CoarseSpinor>> &vecs, const std::vector<Block> &block_list,
 		  const int &k_c){
 
@@ -491,6 +605,68 @@ namespace MG {
     vecs.resize(k_c);
 
     }
+
+    void chiralSVD(std::vector<std::shared_ptr<CoarseSpinor>> &vecs, const std::vector<Block> &block_list,
+                  const int &k_c){
+
+        int num_blocks = block_list.size();
+        int num_vecs = vecs.size();
+        IndexType idx = 0;
+        EigenDims_t dims = returnMatDims(*(vecs[idx]), num_vecs);
+
+#pragma omp parallel for
+        for (int block_id = 0; block_id < num_blocks; block_id++){
+
+        const Block &block = block_list[block_id];
+        std::vector<CBSite> block_sitelist = block.getCBSiteList();
+        int num_sites = block.getNumSites();
+
+
+        Eigen::MatrixXcf Pp((dims.n/2) * num_sites, dims.m);
+	Eigen::MatrixXcf Pm((dims.n/2) * num_sites, dims.m);
+
+                for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs); ++curr_vec){
+
+                SpinorToEigen(*(vecs[curr_vec]), Pp, num_sites, block_sitelist, static_cast<int>(curr_vec), 0);
+		SpinorToEigen(*(vecs[curr_vec]), Pm, num_sites, block_sitelist, static_cast<int>(curr_vec), 1);
+
+
+                } //curr_vec
+
+                //the vectors on the blocks now in P, so do the svd, only need U
+                Eigen::JacobiSVD<Eigen::MatrixXcf> svdp(Pp, ComputeThinU);
+		Eigen::JacobiSVD<Eigen::MatrixXcf> svdm(Pm, ComputeThinU);
+                //overwrite P with U
+                Pp = svdp.matrixU();
+		Pm = svdm.matrixU();
+
+                //now place them back in the vectors, keeping the ones corresponding to the largest singular values of the block. 
+                //The singular vectors U_i are sorted largest to smallest already in Eigen
+                //vecs.resize(k_c);
+                for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs); curr_vec++){
+
+                        EigenToSpinor(*(vecs[curr_vec]), Pp, num_sites, block_sitelist, static_cast<int>(curr_vec), 0);
+			EigenToSpinor(*(vecs[curr_vec]), Pm, num_sites, block_sitelist, static_cast<int>(curr_vec), 1);
+                        }
+
+                if (block_id == 0) {
+                MasterLog(INFO, "Printing Singular Values of positive parity block 0 on coarse grid...");
+                for (int j = 0; j < num_vecs; ++j){
+                        MasterLog(INFO, "%f", svdp.singularValues()[j]);
+                }
+                MasterLog(INFO, "Printing Singular Values of negative parity block 0 on coarse grid...");
+                for (int j = 0; j < num_vecs; ++j){
+                        MasterLog(INFO, "%f", svdm.singularValues()[j]);
+                }
+
+                }
+
+        } //block_id
+
+    vecs.resize(k_c);
+
+    }
+
 
     //! 'Restrict' a QDP++ spinor to a CoarseSpinor with the same geometry
     void restrictSpinor(const std::vector<Block> &blocklist,
