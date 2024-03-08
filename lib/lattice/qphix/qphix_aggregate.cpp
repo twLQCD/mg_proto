@@ -492,7 +492,7 @@ namespace MG {
 
 	//fill up Pc with the values of the truncated rank k approximation to V
 	for (int pcols = 0; pcols < num_keep; pcols++) {
-		for (int cs = 0; cs < num; cs++) {
+		for (int cs = 0; cs < num_vecs; cs++) {
 			Pc(cs, pcols) = V(cs, pcols);
 		}
 	}

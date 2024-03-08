@@ -403,6 +403,7 @@ namespace MG {
 	Eigen::MatrixXcf P(dims.n * num_sites, dims.m);
 	Eigen::MatrixXcf Pc(dims.m, dims.m);
 	Eigen::MatrixXcf Pnew(dims.n * num_sites, num_keep);
+	Eigen::MatrixXcf V(dims.m, dims.m);
 	Eigen::MatrixXcf weights = Eigen::MatrixXcf::Zero(dims.m, dims.m);
 
 		for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs); ++curr_vec){
