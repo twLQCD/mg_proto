@@ -176,7 +176,7 @@ namespace MG {
 	}
 	if (p.do_lsvd[0] && p.do_lsq[0]) {
 	MasterLog(INFO, "MG Level 0: Performing SVD followed by Least Squares Interpolation on Local Blocks of all near null vectors");
-	leastSquaresInterp(fine_level.null_vecs, fine_level.blocklist);
+	leastSquaresInterp(fine_level.null_vecs, p.n_vecs_keep[0], fine_level.blocklist);
         orthonormalizeBlockAggregates(fine_level.null_vecs, fine_level.blocklist);
         orthonormalizeBlockAggregates(fine_level.null_vecs, fine_level.blocklist);
 	} else {

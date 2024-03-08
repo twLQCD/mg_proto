@@ -126,7 +126,7 @@ namespace MG {
 	}
 	if (p.do_lsq[fine_level_id] && p.do_lsvd[fine_level_id]) {
 	MasterLog(INFO, "MG Level %d: Performing SVD followed by Least Squares Interpolation on Local Blocks of all near null vectors", fine_level_id);	       
-	leastSquaresInterp(fine_level.null_vecs, fine_level.blocklist);
+	leastSquaresInterp(fine_level.null_vecs, p.n_vecs_keep[fine_level_id], fine_level.blocklist);
         orthonormalizeBlockAggregates(fine_level.null_vecs, fine_level.blocklist);
         orthonormalizeBlockAggregates(fine_level.null_vecs, fine_level.blocklist);
 	} else {
@@ -140,7 +140,7 @@ namespace MG {
 	//now have a different number of near null vectors (potentially) so change
 	//num_vecs to be equal to the number of near null vectors
 	num_vecs = fine_level.null_vecs.size();
-	//assert(num_vecs == p.n_vecs_keep[fine_level_id]);
+
         // Create the blocked Clover and Gauge Fields
         // This service needs the blocks, the vectors and is a convenience
         // Function of the M

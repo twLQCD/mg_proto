@@ -384,7 +384,7 @@ namespace MG {
     }
 
 
-    void leastSquaresInterp(std::vector<std::shared_ptr<CoarseSpinor>> &vecs, const std::vector<Block> &block_list){
+    void leastSquaresInterp(std::vector<std::shared_ptr<CoarseSpinor>> &vecs, const int &num_keep, const std::vector<Block> &block_list){
 
 	int num_blocks = block_list.size();
 	int num_vecs = vecs.size();
@@ -401,11 +401,9 @@ namespace MG {
 
 
 	Eigen::MatrixXcf P(dims.n * num_sites, dims.m);
-	Eigen::MatrixXcf Pc(dims.n, dims.n);
-	Eigen::MatrixXcf Pnew(dims.n * num_sites, dims.n);
-	//Eigen::MatrixXcf weights(dims.m, dims.m);
-	Eigen::MatrixXcf weights = Eigen::MatrixXcf::Zero(dims.n, dims.n);
-	Eigen::MatrixXcf Psvd(dims.n * num_sites ,dims.n);
+	Eigen::MatrixXcf Pc(dims.m, dims.m);
+	Eigen::MatrixXcf Pnew(dims.n * num_sites, num_keep);
+	Eigen::MatrixXcf weights = Eigen::MatrixXcf::Zero(dims.m, dims.m);
 
 		for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs); ++curr_vec){
 
@@ -414,30 +412,33 @@ namespace MG {
 
 		} //curr_vec
 
-		//the vectors on the blocks now in P, so do the svd, only need U
-		Eigen::JacobiSVD<Eigen::MatrixXcf> svd(P, ComputeThinU);
-		//overwrite P with U
-		P = svd.matrixU();
-		//weights = svd.singularValues().asDiagonal();
-		for (int i = 0; i < dims.n; ++i){weights(i,i) = svd.singularValues()[i];};
-		for (int pcols = 0; pcols < Pc.cols(); pcols++){
-			for (int cs = 0; cs < dims.n; cs++){
-				Pc(cs, pcols) = P(cs, pcols);
+		//the vectors on the blocks now in P, so do the svd, only need V
+		Eigen::JacobiSVD<Eigen::MatrixXcf> svd(P, ComputeThinV);
+
+		V = svd.matrixV();
+
+		for (int i = 0; i < dims.m; ++i){weights(i,i) = svd.singularValues()[i];};
+
+		for (int pcols = 0; pcols < num_keep; pcols++){
+			for (int cs = 0; cs < dims.m; cs++){
+				Pc(cs, pcols) = V(cs, pcols);
 			}
 		}
+		//is this allowed?
+		Pc = Pc.adjoint();
 
-		for (int pcols = 0; pcols < dims.n; pcols++){
+		/*for (int pcols = 0; pcols < dims.n; pcols++){
 			for (int cs = 0; cs < dims.n * num_sites; ++cs){
 				Psvd(cs,pcols) = P(cs,pcols);
 			}
-		}
+		}*/
 
-		Pnew = eigenLeastSquaresCoarse(Psvd, Pc, weights);
+		Pnew = eigenLeastSquaresCoarse(P, Pc, weights);
 
 		//now place them back in the vectors, keeping the ones corresponding to the largest singular values of the block. 
 		//The singular vectors U_i are sorted largest to smallest already in Eigen
 		//vecs.resize(k_c);
-		for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(dims.n); curr_vec++){
+		for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_keep); curr_vec++){
 
 			EigenToSpinor(*(vecs[curr_vec]), Pnew, num_sites, block_sitelist, static_cast<int>(curr_vec));
 			}
@@ -451,7 +452,7 @@ namespace MG {
 
 	} //block_id
 
-    vecs.resize(dims.n);
+    vecs.resize(num_keep);
 
     }
 

@@ -453,10 +453,9 @@ namespace MG {
 
 
     //gather the vecs on the block, and do a least squares interpolation from the fine degrees of freedom to 
-    //the coarse degrees of freedom (read: least squares minimization of all lattice sites on a block to the 
-    //origin of the block
+    //the coarse degrees of freedom (read: least squares minimization of all fine lattice vectors to right singular vectors
     template <typename QS>
-    inline void leastSquaresInterpT(std::vector<std::shared_ptr<QS>> &vecs, const std::vector<Block> &block_list){
+    inline void leastSquaresInterpT(std::vector<std::shared_ptr<QS>> &vecs, const int &num_keep, const std::vector<Block> &block_list){
 
 	int num_blocks = block_list.size();
 	int num_vecs = vecs.size();
@@ -468,11 +467,11 @@ namespace MG {
 		int num_sites = block.getNumSites();
 
 		Eigen::MatrixXcd P(3*4*num_sites, num_vecs);
-		//Eigen::MatrixXcd weights(12, 12);
-		Eigen::MatrixXcd weights=Eigen::MatrixXcd::Zero(12,12);
-		Eigen::MatrixXcd Pc(3*4, 12);
-		Eigen::MatrixXcd Pnew(3*4*num_sites, 12);
-		Eigen::MatrixXcd Psvd(12*num_sites,12);
+		Eigen::MatrixXcd V(num_vecs,num_vecs);
+		Eigen::MatrixXcd weights(num_vecs, num_vecs);
+		Eigen::MatrixXcd weights = Eigen::MatrixXcd::Zero(num_vecs,num_vecs);
+		Eigen::MatrixXcd Pc(num_vecs, num_keep);
+		Eigen::MatrixXcd Pnew(3*4*num_sites, num_keep);
 
 		for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs); curr_vec++){
 		
@@ -481,27 +480,33 @@ namespace MG {
 		} //curr_vec
 
 	//do the svd
-	Eigen::JacobiSVD<Eigen::MatrixXcd> svd(P, Eigen::ComputeThinU);
-	//overwrite P with U
-	P = svd.matrixU();
-	for (int i = 0; i < 12; ++i){
-	//weights = svd.singularValues().asDiagonal();
+	Eigen::JacobiSVD<Eigen::MatrixXcd> svd(P, Eigen::ComputeThinV);
+
+	//U = svd.matrixU();
+	V = svd.matrixV();
+
+	//fill in the weights with the singular values
+	for (int i = 0; i < num_vecs; ++i){
 	weights(i,i) = svd.singularValues()[i];
 	}
-	//fill up Pc with the values at the origin (first site)
-	for (int pcols = 0; pcols < Pc.cols(); pcols++) {
-		for (int cs = 0; cs < 12; cs++) {
-			Pc(cs, pcols) = P(cs, pcols);
+
+	//fill up Pc with the values of the truncated rank k approximation to V
+	for (int pcols = 0; pcols < num_keep; pcols++) {
+		for (int cs = 0; cs < num; cs++) {
+			Pc(cs, pcols) = V(cs, pcols);
 		}
 	}
+	//take the adjoint, now Pc = V_k^{\dag}
+	Pc = Pc.adjoint();
+
 	//fill up Psvd with the vectors of the first 12 singular vectors
-	for (int pcols = 0; pcols < 12; pcols++){
+	/*for (int pcols = 0; pcols < num_vecs; pcols++){
 		for (int cs = 0; cs < 12*num_sites; cs++){
 			Psvd(cs,pcols) = P(cs,pcols);
 		}
-	}
+	}*/
 
-	Pnew = eigenLeastSquares(Psvd, Pc, weights);
+	Pnew = eigenLeastSquares(P, Pc, weights);
 
 	if (block_id == 0) {
 		QDPIO::cout << "Singular values of block " << block_id << "  are :" << std::endl;
@@ -510,25 +515,25 @@ namespace MG {
 		}
 	}
 
-	//now place them back in the vectors. P on the fine level will always be 12!!!
-	for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(12);  curr_vec++){
+	//now place them back in the vectors
+	for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_keep);  curr_vec++){
 
 	EigenToQPhiXSpinor(*(vecs[curr_vec]), Pnew, num_sites, block_sitelist, static_cast<int>(curr_vec));
 	} //curr_vec
 
     } //block_id
 
-    //resize the vectors to keep only the 12 from least squares
-    vecs.resize(12);
+    //resize the vectors to keep only the ones from the least squares
+    vecs.resize(num_keep);
 
     } //func
 
-    void leastSquaresInterp(std::vector<std::shared_ptr<QPhiXSpinor>> &vecs, const std::vector<Block> &block_list){
-	    leastSquaresInterpT(vecs, block_list);
+    void leastSquaresInterp(std::vector<std::shared_ptr<QPhiXSpinor>> &vecs, const int &num_keep, const std::vector<Block> &block_list){
+	    leastSquaresInterpT(vecs, num_keep, block_list);
     }
 
-    void leastSquaresInterp(std::vector<std::shared_ptr<QPhiXSpinorF>> &vecs, const std::vector<Block> &block_list){
-	    leastSquaresInterpT(vecs, block_list);
+    void leastSquaresInterp(std::vector<std::shared_ptr<QPhiXSpinorF>> &vecs, const int &num_keep, const std::vector<Block> &block_list){
+	    leastSquaresInterpT(vecs, num_keep, block_list);
     }
 
     //gather the vecs belonging to each partition on the block
