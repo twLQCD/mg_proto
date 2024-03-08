@@ -468,7 +468,6 @@ namespace MG {
 
 		Eigen::MatrixXcd P(3*4*num_sites, num_vecs);
 		Eigen::MatrixXcd V(num_vecs,num_vecs);
-		Eigen::MatrixXcd weights(num_vecs, num_vecs);
 		Eigen::MatrixXcd weights = Eigen::MatrixXcd::Zero(num_vecs,num_vecs);
 		Eigen::MatrixXcd Pc(num_vecs, num_keep);
 		Eigen::MatrixXcd Pnew(3*4*num_sites, num_keep);
