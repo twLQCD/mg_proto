@@ -401,7 +401,8 @@ namespace MG {
 
 
 	Eigen::MatrixXcf P(dims.n * num_sites, dims.m);
-	Eigen::MatrixXcf Pc(dims.m, dims.m);
+	Eigen::MatrixXcf Pc(dims.m, num_keep);
+	Eigen::MatrixXcf Pct(num_keep, dims.m);
 	Eigen::MatrixXcf Pnew(dims.n * num_sites, num_keep);
 	Eigen::MatrixXcf V(dims.m, dims.m);
 	Eigen::MatrixXcf weights = Eigen::MatrixXcf::Zero(dims.m, dims.m);
@@ -425,8 +426,8 @@ namespace MG {
 				Pc(cs, pcols) = V(cs, pcols);
 			}
 		}
-		//is this allowed?
-		Pc = Pc.adjoint();
+		
+		Pct = Pc.adjoint();
 
 		/*for (int pcols = 0; pcols < dims.n; pcols++){
 			for (int cs = 0; cs < dims.n * num_sites; ++cs){
@@ -434,7 +435,7 @@ namespace MG {
 			}
 		}*/
 
-		Pnew = eigenLeastSquaresCoarse(P, Pc, weights);
+		Pnew = eigenLeastSquaresCoarse(P, Pct, weights);
 
 		//now place them back in the vectors, keeping the ones corresponding to the largest singular values of the block. 
 		//The singular vectors U_i are sorted largest to smallest already in Eigen

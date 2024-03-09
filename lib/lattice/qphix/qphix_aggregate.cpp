@@ -470,6 +470,7 @@ namespace MG {
 		Eigen::MatrixXcd V(num_vecs,num_vecs);
 		Eigen::MatrixXcd weights = Eigen::MatrixXcd::Zero(num_vecs,num_vecs);
 		Eigen::MatrixXcd Pc(num_vecs, num_keep);
+		Eigen::MatrixXcd Pct(num_keep, num_vecs);
 		Eigen::MatrixXcd Pnew(3*4*num_sites, num_keep);
 
 		for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs); curr_vec++){
@@ -496,7 +497,7 @@ namespace MG {
 		}
 	}
 	//take the adjoint, now Pc = V_k^{\dag}
-	Pc = Pc.adjoint();
+	Pct = Pc.adjoint();
 
 	//fill up Psvd with the vectors of the first 12 singular vectors
 	/*for (int pcols = 0; pcols < num_vecs; pcols++){
@@ -505,7 +506,7 @@ namespace MG {
 		}
 	}*/
 
-	Pnew = eigenLeastSquares(P, Pc, weights);
+	Pnew = eigenLeastSquares(P, Pct, weights);
 
 	if (block_id == 0) {
 		QDPIO::cout << "Singular values of block " << block_id << "  are :" << std::endl;
