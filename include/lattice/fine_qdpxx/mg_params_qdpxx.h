@@ -26,6 +26,7 @@ namespace MG {
     struct SetupParams {
         int n_levels;
         std::vector<int> n_vecs;
+	std::vector<int> n_streams;
 	std::vector<bool> do_psvd;
 	std::vector<bool> do_lsvd;
 	std::vector<bool> do_lsq;

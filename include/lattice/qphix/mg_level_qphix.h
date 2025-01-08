@@ -49,6 +49,9 @@ namespace MG {
         std::vector<CoarseLevelT> coarse_levels;
     };
 
+
+    
+
     template <typename SpinorT, typename SolverT, typename LinOpT, typename CoarseLevelT>
     void SetupQPhiXToCoarseGenerateVecsT(const SetupParams &p, std::shared_ptr<const LinOpT> M_fine,
                                          MGLevelQPhiXT<SpinorT, SolverT, LinOpT> &fine_level,
@@ -130,6 +133,110 @@ namespace MG {
         M_fine->clear();
     }
 
+
+    template <typename SpinorT, typename SolverT, typename LinOpT, typename CoarseLevelT>
+    void SetUpQPhixToCoarseVecsInStreamingSVDT(const SetupParams &p, std::shared_ptr<const LinOpT> M_fine,
+                                   MGLevelQPhiXT<SpinorT, SolverT, LinOpT> &fine_level,
+                                   CoarseLevelT &coarse_level) {
+	
+        (void)coarse_level;
+
+        // Check M
+        if (!M_fine) { MasterLog(ERROR, "%s: M_fine is null...", __FUNCTION__); }
+
+        fine_level.M = M_fine;
+
+        // OK we will need the level for this info
+        fine_level.info = std::make_shared<LatticeInfo>(M_fine->GetInfo());
+
+        // Null solver is BiCGStabF. Let us make a parameter struct for it.
+        LinearSolverParamsBase params = p.null_solver_params[0];
+
+        // Zero RHS
+        SpinorT b(*(fine_level.info));
+        ZeroVec(b);
+
+	fine_level.null_solver = std::make_shared<const SolverT>(*M_fine, params);
+
+        // Generate the vectors
+        int num_vecs = p.n_vecs[0];
+	fine_level.null_vecs.resize(num_vecs);
+
+        //create the block list
+        const IndexArray &latdims = fine_level.info->GetLatticeDimensions();
+        const CBSubset &subset = SUBSET_ALL;
+        MasterLog(INFO, "MG Level 0: Creating BlockList");
+        IndexArray blocked_lattice_dims;
+        IndexArray blocked_lattice_orig;
+        CreateBlockList(fine_level.blocklist, blocked_lattice_dims, blocked_lattice_orig, latdims,
+                        p.block_sizes[0], fine_level.info->GetLatticeOrigin());
+
+
+	for (int i = 0; i < p.n_streams[0]; i++) {
+
+        	for (int k = ( i == 0 ? 0 : p.n_vecs[0]-p.n_vecs_keep[0] ); k < num_vecs; ++k) {
+
+			//if we are on the first stream, then we 
+            		if ( i == 0 ) {fine_level.null_vecs[k] = std::make_shared<SpinorT>(*(fine_level.info));}
+
+			//the indexing on the loop means that for the first stream, all nullvecs will be filled with 
+			//noise for an initial guess. On subsequent iterations, only the right singular vectors that are
+			//not being kept will be filled with noise and used to recompute null vectors
+            		Gaussian(*(fine_level.null_vecs[k]));
+
+                	std::vector<LinearSolverResults> res = (*(fine_level.null_solver))(
+                    	*(fine_level.null_vecs[k]), b, ABSOLUTE, InitialGuessGiven);
+                	assert(res.size() == 1);
+
+
+                	double norm2_cb0 = sqrt(Norm2Vec(*(fine_level.null_vecs[k]), SUBSET_EVEN)[0]);
+                	double norm2_cb1 = sqrt(Norm2Vec(*(fine_level.null_vecs[k]), SUBSET_ODD)[0]);
+
+                	MasterLog(
+                    	INFO,
+                    	"MG Level 0: BiCGStab Solver Took: %d iterations: || v_e ||=%16.8e || v_o "
+                    	"||=%16.8e",
+                    	res[0].n_count, norm2_cb0, norm2_cb1);
+
+        	} // loop over vectors
+
+
+	//call the chiral svd. Commented out the resize in in chiralSVDT so that all of the right singular vectors are kept
+	chiralSVD(fine_level.null_vecs, fine_level.blocklist, p.n_vecs_keep[0]);
+	
+	} //n_streams for loop
+
+	//now keep only the right singular vectors
+	fine_level.null_vecs.resize(p.n_vecs_keep[0]);
+
+        num_vecs = p.n_vecs_keep[0];
+
+        // Create the blocked Clover and Gauge Fields
+        // This service needs the blocks, the vectors and is a convenience
+        // Function of the M
+        coarse_level.info =
+            std::make_shared<const LatticeInfo>(blocked_lattice_orig, blocked_lattice_dims, 2,
+                                                num_vecs, fine_level.info->GetNodeInfo(), 1);
+
+        coarse_level.gauge = std::make_shared<CoarseGauge>(*(coarse_level.info));
+
+        M_fine->generateCoarse(fine_level.blocklist, fine_level.null_vecs, *(coarse_level.gauge));
+
+        coarse_level.M = std::make_shared<const typename CoarseLevelT::LinOp>(coarse_level.gauge);
+
+        const char *coarse_prefix_name = std::getenv("MG_COARSE_FILENAME");
+        if (coarse_prefix_name != nullptr && std::strlen(coarse_prefix_name) > 0) {
+            std::string filename = std::string(coarse_prefix_name) + "_level1.bin";
+            MasterLog(INFO, "CoarseEOCloverLinearOperator: Writing coarse operator in %s",
+                      filename.c_str());
+            CoarseDiracOp::write(*(coarse_level.gauge), filename);
+        }
+    
+	M_fine->clear();
+
+
+    }
+
     template <typename SpinorT, typename SolverT, typename LinOpT, typename CoarseLevelT>
     void SetupQPhiXToCoarseVecsInT(const SetupParams &p, std::shared_ptr<const LinOpT> M_fine,
                                    MGLevelQPhiXT<SpinorT, SolverT, LinOpT> &fine_level,
@@ -173,6 +280,7 @@ namespace MG {
 	if (p.do_lsvd[0] && !p.do_lsq[0]) {
 	MasterLog(INFO, "MG Level 0: Performing SVD on Local Blocks of all near null vectors simulataneously.");
 	chiralSVD(fine_level.null_vecs, fine_level.blocklist, p.n_vecs_keep[0]);
+	fine_level.null_vecs.resize(p.n_vecs_keep[0]);
 	}
 	if (p.do_lsvd[0] && p.do_lsq[0]) {
 	MasterLog(INFO, "MG Level 0: Performing SVD followed by Least Squares Interpolation on Local Blocks of all near null vectors");
@@ -220,8 +328,12 @@ namespace MG {
     void SetupQPhiXToCoarseT(const SetupParams &p, const std::shared_ptr<const LinOpT> &M_fine,
                              MGLevelQPhiXT<SpinorT, SolverT, LinOpT> &fine_level,
                              CoarseLevelT &coarse_level) {
-        SetupQPhiXToCoarseGenerateVecsT<>(p, M_fine, fine_level, coarse_level);
-        SetupQPhiXToCoarseVecsInT<>(p, M_fine, fine_level, coarse_level);
+	if ( p.n_streams[0] != 0 ) {
+		SetUpQPhixToCoarseVecsInStreamingSVDT<>(p, M_fine, fine_level, coarse_level);
+	} else {
+        	SetupQPhiXToCoarseGenerateVecsT<>(p, M_fine, fine_level, coarse_level);
+        	SetupQPhiXToCoarseVecsInT<>(p, M_fine, fine_level, coarse_level);
+	}
     }
 
     template <typename SpinorT, typename SolverT, typename LinOpT, typename CoarseLevelT>
@@ -256,9 +368,15 @@ namespace MG {
         for (int coarse_level = 1; coarse_level < n_coarse_levels; ++coarse_level) {
 
             MasterLog(INFO, "Setup Level %d and %d", coarse_level, coarse_level + 1);
-            SetupCoarseToCoarse(p, mg_levels.coarse_levels[coarse_level - 1].M, coarse_level,
+	    if (p.n_streams[coarse_level] != 0) {
+	    SetupCoarseToCoarseStreamingSVD(p, mg_levels.coarse_levels[coarse_level - 1].M, coarse_level,
                                 mg_levels.coarse_levels[coarse_level - 1],
                                 mg_levels.coarse_levels[coarse_level]);
+	    } else {
+	                SetupCoarseToCoarse(p, mg_levels.coarse_levels[coarse_level - 1].M, coarse_level,
+                                mg_levels.coarse_levels[coarse_level - 1],
+                                mg_levels.coarse_levels[coarse_level]);
+	    }
         }
     }
 

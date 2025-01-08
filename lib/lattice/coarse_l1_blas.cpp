@@ -12,7 +12,6 @@
 #include <algorithm>
 #include <cassert>
 #include <complex>
-
 #include "MG_config.h"
 
 #ifdef MG_QMP_COMMS
@@ -353,7 +352,7 @@ namespace MG {
         IndexType xncol = x.GetNCol();
         assert(xcol1 <= xncol);
         IndexType ncol = std::max(0, xcol1 - xcol0);
-        assert(ycol0 + ncol <= y.GetNCol());
+        assert(ycol0 + ncol <= y.GetNCol()); 
 
 #pragma omp parallel for collapse(3) schedule(static)
         for (int cb = subset.start; cb < subset.end; ++cb) {

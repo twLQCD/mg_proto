@@ -685,7 +685,7 @@ namespace MG {
 
     } //block_id
 
-    vecs.resize(k_f);
+    vecs.resize(k_f); 
 
     }
 
@@ -741,7 +741,7 @@ namespace MG {
 
     } //block_id
 
-    vecs.resize(k_f);
+    //vecs.resize(k_f); //commented out for streaming SVD. This is now done after the call in SetupQPhiXToCoarseVecsInT if this routine is used
 
     }
 

@@ -666,7 +666,7 @@ namespace MG {
 
         } //block_id
 
-    vecs.resize(k_c);
+    //vecs.resize(k_c); //commented out for streaming SVD. resize is now done after the call to this routine if it is used
 
     }
 
