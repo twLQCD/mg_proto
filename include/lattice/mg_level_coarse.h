@@ -54,7 +54,8 @@ namespace MG {
 
         // Zero RHS and randomize the initial guess
         const LatticeInfo &fine_info = *(fine_level.info);
-        int num_vecs = p.n_vecs[fine_level_id] + p.n_vecs_keep[fine_level_id];
+        //int num_vecs = p.n_vecs[fine_level_id] + p.n_vecs_keep[fine_level_id];
+	int num_vecs = 2*p.n_vecs[fine_level_id];
 	fine_level.null_vecs.resize(num_vecs);
 	for (int k = 0; k < num_vecs; k++) {fine_level.null_vecs[k] = std::make_shared<CoarseSpinor>(fine_info);}
 
@@ -68,7 +69,8 @@ namespace MG {
 	for (int i = 0; i < p.n_streams[fine_level_id]; i++) {
 		
 		std::shared_ptr<CoarseSpinor> x;
-		num_vecs = ( i == 0 ? p.n_vecs[fine_level_id] : p.n_vecs[fine_level_id] + p.n_vecs_keep[fine_level_id]);
+		//num_vecs = ( i == 0 ? p.n_vecs[fine_level_id] : p.n_vecs[fine_level_id] + p.n_vecs_keep[fine_level_id]);
+		num_vecs = ( i == 0 ? p.n_vecs[fine_level_id] : 2*p.n_vecs[fine_level_id]);
 
 		x = std::make_shared<CoarseSpinor>(fine_info, num_vecs);
 		Gaussian(*x);

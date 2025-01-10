@@ -159,7 +159,8 @@ namespace MG {
 	fine_level.null_solver = std::make_shared<const SolverT>(*M_fine, params);
 
         // Generate the vectors
-        int num_vecs = p.n_vecs[0] + p.n_vecs_keep[0];
+        //int num_vecs = p.n_vecs[0] + p.n_vecs_keep[0];
+	int num_vecs = 2*p.n_vecs[0];
 	fine_level.null_vecs.resize(num_vecs);
 
 	for (int k = 0; k < num_vecs; k++) {fine_level.null_vecs[k] = std::make_shared<SpinorT>(*(fine_level.info));}

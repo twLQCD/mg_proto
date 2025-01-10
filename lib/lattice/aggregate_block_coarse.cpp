@@ -687,8 +687,8 @@ namespace MG {
 
         Eigen::MatrixXcf Pp((dims.n/2) * num_sites, dims.m);
         Eigen::MatrixXcf Pm((dims.n/2) * num_sites, dims.m);
-	Eigen::MatrixXcf sp = Eigen::MatrixXcf::Zero(dims.m, dims.m);
-	Eigen::MatrixXcf sm = Eigen::MatrixXcf::Zero(dims.m, dims.m);
+	//Eigen::MatrixXcf sp = Eigen::MatrixXcf::Zero(dims.m, dims.m);
+	//Eigen::MatrixXcf sm = Eigen::MatrixXcf::Zero(dims.m, dims.m);
 
                 for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs); ++curr_vec){
 
@@ -705,13 +705,13 @@ namespace MG {
                 Pp = svdp.matrixU();
                 Pm = svdm.matrixU();
 
-		for (int i = 0; i < dims.m; i++) {
-			sp(i,i) = svdp.singularValues()[i];
-			sm(i,i) = svdm.singularValues()[i];
-		}
+		//for (int i = 0; i < dims.m; i++) {
+		//	sp(i,i) = svdp.singularValues()[i];
+		//	sm(i,i) = svdm.singularValues()[i];
+		//}
 
-		Pp = Pp * sp;
-		Pm = Pm * sm;
+		//Pp = Pp * sp;
+		//Pm = Pm * sm;
 
                 //now place them back in the vectors, keeping the ones corresponding to the largest singular values of the block. 
                 //The singular vectors U_i are sorted largest to smallest already in Eigen

@@ -759,8 +759,8 @@ namespace MG {
 
                 Eigen::MatrixXcd Pp(6*num_sites, num_vecs);
                 Eigen::MatrixXcd Pm(6*num_sites, num_vecs);
-		Eigen::MatrixXcd sp = Eigen::MatrixXcd::Zero(num_vecs,num_vecs);
-		Eigen::MatrixXcd sm = Eigen::MatrixXcd::Zero(num_vecs,num_vecs);
+		//Eigen::MatrixXcd sp = Eigen::MatrixXcd::Zero(num_vecs,num_vecs);
+		//Eigen::MatrixXcd sm = Eigen::MatrixXcd::Zero(num_vecs,num_vecs);
 
                 for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs); curr_vec++){
 
@@ -775,11 +775,11 @@ namespace MG {
         Pp = svdp.matrixU();
         Pm = svdm.matrixU();
 
-        for (int i = 0; i < num_vecs; ++i){
+        /*for (int i = 0; i < num_vecs; ++i){
         sp(i,i) = svdp.singularValues()[i];
 	sm(i,i) = svdm.singularValues()[i];
         }
-
+	*/
 
         if (block_id == 0) {
                 QDPIO::cout << "Singular values of positive parity block " << block_id << "  are :" << std::endl;
@@ -793,8 +793,8 @@ namespace MG {
 
         }
 
-	Pm = Pm * sm;
-	Pp = Pp * sp;
+	//Pm = Pm * sm;
+	//Pp = Pp * sp;
 
         //now place them back in the vectors, keeping the ones correspoding to the largest singular values. The singular vectors U_i are sorted largest to smallest in Eigen
         //vecs.resize(k_f);
