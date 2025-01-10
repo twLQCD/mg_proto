@@ -202,7 +202,7 @@ namespace MG {
 
 
 	//call the chiral svd. Commented out the resize in in chiralSVDT so that all of the right singular vectors are kept
-	chiralSVD(fine_level.null_vecs, fine_level.blocklist, p.n_vecs_keep[0]);
+	streamingChiralSVD(fine_level.null_vecs, fine_level.blocklist);
 	
 	} //n_streams for loop
 

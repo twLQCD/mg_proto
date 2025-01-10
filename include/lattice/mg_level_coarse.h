@@ -96,7 +96,7 @@ namespace MG {
 			n_test_vecs++;
         	}
 
-		chiralSVD(fine_level.null_vecs, fine_level.blocklist, p.n_vecs_keep[fine_level_id]);	
+		streamingChiralSVD(fine_level.null_vecs, fine_level.blocklist);	
 
 	} //n_streams
 

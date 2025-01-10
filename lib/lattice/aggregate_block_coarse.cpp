@@ -670,6 +670,75 @@ namespace MG {
 
     }
 
+    void streamingChiralSVD(std::vector<std::shared_ptr<CoarseSpinor>> &vecs, const std::vector<Block> &block_list){
+
+        int num_blocks = block_list.size();
+        int num_vecs = vecs.size();
+        IndexType idx = 0;
+        EigenDims_t dims = returnMatDims(*(vecs[idx]), num_vecs);
+
+#pragma omp parallel for
+        for (int block_id = 0; block_id < num_blocks; block_id++){
+
+        const Block &block = block_list[block_id];
+        std::vector<CBSite> block_sitelist = block.getCBSiteList();
+        int num_sites = block.getNumSites();
+
+
+        Eigen::MatrixXcf Pp((dims.n/2) * num_sites, dims.m);
+        Eigen::MatrixXcf Pm((dims.n/2) * num_sites, dims.m);
+	Eigen::MatrixXcf sp = Eigen::MatrixXcf::Zero(dims.m, dims.m);
+	Eigen::MatrixXcf sm = Eigen::MatrixXcf::Zero(dims.m, dims.m);
+
+                for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs); ++curr_vec){
+
+                SpinorToEigen(*(vecs[curr_vec]), Pp, num_sites, block_sitelist, static_cast<int>(curr_vec), 0);
+                SpinorToEigen(*(vecs[curr_vec]), Pm, num_sites, block_sitelist, static_cast<int>(curr_vec), 1);
+
+
+                } //curr_vec
+
+                //the vectors on the blocks now in P, so do the svd, only need U
+                Eigen::JacobiSVD<Eigen::MatrixXcf> svdp(Pp, ComputeThinU);
+                Eigen::JacobiSVD<Eigen::MatrixXcf> svdm(Pm, ComputeThinU);
+                //overwrite P with U
+                Pp = svdp.matrixU();
+                Pm = svdm.matrixU();
+
+		for (int i = 0; i < dims.m; i++) {
+			sp(i,i) = svdp.singularValues()[i];
+			sm(i,i) = svdm.singularValues()[i];
+		}
+
+		Pp = Pp * sp;
+		Pm = Pm * sm;
+
+                //now place them back in the vectors, keeping the ones corresponding to the largest singular values of the block. 
+                //The singular vectors U_i are sorted largest to smallest already in Eigen
+                //vecs.resize(k_c);
+                for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs); curr_vec++){
+
+                        EigenToSpinor(*(vecs[curr_vec]), Pp, num_sites, block_sitelist, static_cast<int>(curr_vec), 0);
+                        EigenToSpinor(*(vecs[curr_vec]), Pm, num_sites, block_sitelist, static_cast<int>(curr_vec), 1);
+                        }
+
+                if (block_id == 0) {
+                MasterLog(INFO, "Printing Singular Values of positive parity block 0 on coarse grid...");
+                for (int j = 0; j < num_vecs; ++j){
+                        MasterLog(INFO, "%f", svdp.singularValues()[j]);
+                }
+                MasterLog(INFO, "Printing Singular Values of negative parity block 0 on coarse grid...");
+                for (int j = 0; j < num_vecs; ++j){
+                        MasterLog(INFO, "%f", svdm.singularValues()[j]);
+                }
+
+                }
+
+        } //block_id
+
+    }
+
+
 
     //! 'Restrict' a QDP++ spinor to a CoarseSpinor with the same geometry
     void restrictSpinor(const std::vector<Block> &blocklist,

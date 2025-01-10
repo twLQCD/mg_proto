@@ -745,6 +745,72 @@ namespace MG {
 
     }
 
+    //gather the vecs on the block, and do an SVD of the block
+    template <typename QS>
+    inline void streamingChiralSVDT(std::vector<std::shared_ptr<QS>> &vecs, const std::vector<Block> &block_list){
+
+        int num_blocks = block_list.size();
+        int num_vecs = vecs.size();
+#pragma omp parallel for
+        for (int block_id = 0; block_id < num_blocks; block_id++){
+                const Block &block = block_list[block_id];
+                auto block_sitelist = block.getCBSiteList();
+                int num_sites = block.getNumSites();
+
+                Eigen::MatrixXcd Pp(6*num_sites, num_vecs);
+                Eigen::MatrixXcd Pm(6*num_sites, num_vecs);
+		Eigen::MatrixXcd sp = Eigen::MatrixXcd::Zero(num_vecs,num_vecs);
+		Eigen::MatrixXcd sm = Eigen::MatrixXcd::Zero(num_vecs,num_vecs);
+
+                for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs); curr_vec++){
+
+                QPhiXSpinorToEigen(*(vecs[curr_vec]), Pp, num_sites, block_sitelist, static_cast<int>(curr_vec), 0);
+                QPhiXSpinorToEigen(*(vecs[curr_vec]), Pm, num_sites, block_sitelist, static_cast<int>(curr_vec), 1);
+
+                } //curr_vec
+
+        Eigen::JacobiSVD<Eigen::MatrixXcd> svdp(Pp, Eigen::ComputeThinU);
+        Eigen::JacobiSVD<Eigen::MatrixXcd> svdm(Pm, Eigen::ComputeThinU);
+        //overwrite P with U
+        Pp = svdp.matrixU();
+        Pm = svdm.matrixU();
+
+        for (int i = 0; i < num_vecs; ++i){
+        sp(i,i) = svdp.singularValues()[i];
+	sm(i,i) = svdm.singularValues()[i];
+        }
+
+
+        if (block_id == 0) {
+                QDPIO::cout << "Singular values of positive parity block " << block_id << "  are :" << std::endl;
+                for (int j = 0; j < num_vecs; ++j){
+                        QDPIO::cout << svdp.singularValues()[j] << std::endl;
+                }
+                QDPIO::cout << "Singular values of negative parity block " << block_id << "  are :" << std::endl;
+                for (int j = 0; j < num_vecs; ++j){
+                        QDPIO::cout << svdm.singularValues()[j] << std::endl;
+                }
+
+        }
+
+	Pm = Pm * sm;
+	Pp = Pp * sp;
+
+        //now place them back in the vectors, keeping the ones correspoding to the largest singular values. The singular vectors U_i are sorted largest to smallest in Eigen
+        //vecs.resize(k_f);
+        for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs);  curr_vec++){
+
+        EigenToQPhiXSpinor(*(vecs[curr_vec]), Pp, num_sites, block_sitelist, static_cast<int>(curr_vec), 0);
+        EigenToQPhiXSpinor(*(vecs[curr_vec]), Pm, num_sites, block_sitelist, static_cast<int>(curr_vec), 1);
+
+        } //curr_vec
+
+    } //block_id
+
+
+    }
+
+
 
     void localSVD(std::vector<std::shared_ptr<QPhiXSpinor>> &vecs, const std::vector<Block> &block_list,
 		  const int &k_f){
@@ -766,6 +832,13 @@ namespace MG {
         chiralSVDT(vecs, block_list, k_f);
     }
 
+    void streamingChiralSVD(std::vector<std::shared_ptr<QPhiXSpinor>> &vecs, const std::vector<Block> &block_list){
+        streamingChiralSVDT(vecs, block_list);
+    }
+
+    void streamingChiralSVD(std::vector<std::shared_ptr<QPhiXSpinorF>> &vecs, const std::vector<Block> &block_list){
+        streamingChiralSVDT(vecs, block_list);
+    }
 
     //! 'Restrict' a QDP++ spinor to a CoarseSpinor with the same geometry
     template <typename QS>
