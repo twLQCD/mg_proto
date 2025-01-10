@@ -54,8 +54,9 @@ namespace MG {
 
         // Zero RHS and randomize the initial guess
         const LatticeInfo &fine_info = *(fine_level.info);
-        int num_vecs = p.n_vecs[fine_level_id];
+        int num_vecs = p.n_vecs[fine_level_id] + p.n_vecs_keep[fine_level_id];
 	fine_level.null_vecs.resize(num_vecs);
+	for (int k = 0; k < num_vecs; k++) {fine_level.null_vecs[k] = std::make_shared<CoarseSpinor>(fine_info);}
 
 	IndexArray blocked_lattice_dims;
         IndexArray blocked_lattice_orig;
@@ -67,7 +68,7 @@ namespace MG {
 	for (int i = 0; i < p.n_streams[fine_level_id]; i++) {
 		
 		std::shared_ptr<CoarseSpinor> x;
-		num_vecs = ( i == 0 ? p.n_vecs[fine_level_id] : p.n_vecs[fine_level_id] - p.n_vecs_keep[fine_level_id]);
+		num_vecs = ( i == 0 ? p.n_vecs[fine_level_id] : p.n_vecs[fine_level_id] + p.n_vecs_keep[fine_level_id]);
 
 		x = std::make_shared<CoarseSpinor>(fine_info, num_vecs);
 		Gaussian(*x);
@@ -87,16 +88,19 @@ namespace MG {
             	if (num_vecs > 0)
                 	MasterLog(INFO, "Level %d: Solver Took: %d iterations", fine_level_id,
                         res[0].n_count);
+
 		int n_test_vecs = 0;
-		for (int k = ( i == 0 ? 0 : p.n_vecs[fine_level_id] - p.n_vecs_keep[fine_level_id]); k < p.n_vecs[fine_level_id]; ++k) {
-			if (i == 0) {
-            		fine_level.null_vecs[k] = std::make_shared<CoarseSpinor>(fine_info);
-			}
+		for (int k = ( i == 0 ? 0 : p.n_vecs[fine_level_id]); k < (i == 0 ? p.n_vecs[fine_level_id] : num_vecs); ++k) {
             		CopyVec(*fine_level.null_vecs[k], 0, 1, *x, n_test_vecs, SUBSET_ALL);
 			n_test_vecs++;
         	}
-
-		streamingChiralSVD(fine_level.null_vecs, fine_level.blocklist);	
+		
+		if ( i == 0 ) {
+		std::vector<std::shared_ptr<CoarseSpinor>> tmp(fine_level.null_vecs.begin(), fine_level.null_vecs.begin() + p.n_vecs[fine_level_id]);
+		streamingChiralSVD(tmp, fine_level.blocklist);
+		} else {
+		streamingChiralSVD(fine_level.null_vecs, fine_level.blocklist);
+		}
 
 	} //n_streams
 

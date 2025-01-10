@@ -159,8 +159,10 @@ namespace MG {
 	fine_level.null_solver = std::make_shared<const SolverT>(*M_fine, params);
 
         // Generate the vectors
-        int num_vecs = p.n_vecs[0];
+        int num_vecs = p.n_vecs[0] + p.n_vecs_keep[0];
 	fine_level.null_vecs.resize(num_vecs);
+
+	for (int k = 0; k < num_vecs; k++) {fine_level.null_vecs[k] = std::make_shared<SpinorT>(*(fine_level.info));}
 
         //create the block list
         const IndexArray &latdims = fine_level.info->GetLatticeDimensions();
@@ -174,14 +176,8 @@ namespace MG {
 
 	for (int i = 0; i < p.n_streams[0]; i++) {
 
-        	for (int k = ( i == 0 ? 0 : p.n_vecs[0]-p.n_vecs_keep[0] ); k < num_vecs; ++k) {
+		  for (int k = ( i == 0 ? 0 : p.n_vecs[0] ); k < (i == 0 ? p.n_vecs[0] : num_vecs); ++k) {
 
-			//if we are on the first stream, then we 
-            		if ( i == 0 ) {fine_level.null_vecs[k] = std::make_shared<SpinorT>(*(fine_level.info));}
-
-			//the indexing on the loop means that for the first stream, all nullvecs will be filled with 
-			//noise for an initial guess. On subsequent iterations, only the right singular vectors that are
-			//not being kept will be filled with noise and used to recompute null vectors
             		Gaussian(*(fine_level.null_vecs[k]));
 
                 	std::vector<LinearSolverResults> res = (*(fine_level.null_solver))(
@@ -202,7 +198,12 @@ namespace MG {
 
 
 	//call the chiral svd. Commented out the resize in in chiralSVDT so that all of the right singular vectors are kept
+	if ( i == 0 ) {
+	std::vector<std::shared_ptr<SpinorT>> tmp(fine_level.null_vecs.begin(), fine_level.null_vecs.begin() + p.n_vecs[0]);
+	streamingChiralSVD(tmp, fine_level.blocklist);
+	} else {
 	streamingChiralSVD(fine_level.null_vecs, fine_level.blocklist);
+	}
 	
 	} //n_streams for loop
 
