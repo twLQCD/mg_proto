@@ -280,6 +280,7 @@ namespace MG {
 
                         std::complex<double> iprod = innerProductBlockAggr(
                             *(vecs[prev_vec]), *(vecs[curr_vec]), block, aggr);
+			//std::cout << "Inner product of vectors: " << iprod.real() << " " << iprod.imag() << std::endl;
                         std::complex<double> minus_iprod =
                             std::complex<double>(-real(iprod), -imag(iprod));
 
@@ -291,6 +292,7 @@ namespace MG {
                     // Normalize current vector
                     double inv_norm =
                         ((double)1) / sqrt(norm2BlockAggr(*(vecs[curr_vec]), block, aggr));
+		    //std::cout << "Norm of vector in ortho: " << inv_norm << std::endl;
 
                     // vecs[curr_vec] = inv_norm * vecs[curr_vec]
                     axBlockAggr(inv_norm, *(vecs[curr_vec]), block, aggr);
@@ -302,11 +304,13 @@ namespace MG {
 
     void orthonormalizeBlockAggregates(std::vector<std::shared_ptr<QPhiXSpinor>> &vecs,
                                        const std::vector<Block> &block_list) {
+	//std::cout << "You have double precision" << std::endl;
         orthonormalizeBlockAggregatesT(vecs, block_list);
     }
 
     void orthonormalizeBlockAggregates(std::vector<std::shared_ptr<QPhiXSpinorF>> &vecs,
                                        const std::vector<Block> &block_list) {
+	//std::cout << "You have single precision" << std::endl;
         orthonormalizeBlockAggregatesT(vecs, block_list);
     }
 
@@ -333,8 +337,8 @@ namespace MG {
     }
 
 
-    template <typename QS>
-    inline void QPhiXSpinorToEigenT(const QS &src, Eigen::MatrixXcd &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx) {
+    template <typename QS, typename EigenT>
+    inline void QPhiXSpinorToEigenT(const QS &src, EigenT &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx) {
 	for (int site = 0; site < num_sites; ++site){
 	const CBSite &cbsite = block_sitelist[site];
 #pragma omp parallel for collapse(2)
@@ -348,8 +352,8 @@ namespace MG {
 
      }
 
-    template <typename QS>
-    inline void QPhiXSpinorToEigenT(const QS &src, Eigen::MatrixXcd &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx, const int &aggr) {
+    template <typename QS, typename EigenT>
+    inline void QPhiXSpinorToEigenT(const QS &src, EigenT &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx, const int &aggr) {
 	const int min_cspin = aggr == 0 ? 0 : 2;
 	const int max_cspin = aggr == 0 ? 2 : 4;
 	
@@ -371,24 +375,24 @@ namespace MG {
 
 
     void QPhiXSpinorToEigen(const QPhiXSpinor &target, Eigen::MatrixXcd &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx) {
-	QPhiXSpinorToEigenT(target, P, num_sites, block_sitelist, vec_idx);
+	QPhiXSpinorToEigenT<QPhiXSpinor, Eigen::MatrixXcd>(target, P, num_sites, block_sitelist, vec_idx);
     }
 
-    void QPhiXSpinorToEigen(const QPhiXSpinorF &target, Eigen::MatrixXcd &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx) {
-        QPhiXSpinorToEigenT(target, P, num_sites, block_sitelist, vec_idx);
+    void QPhiXSpinorToEigen(const QPhiXSpinorF &target, Eigen::MatrixXcf &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx) {
+        QPhiXSpinorToEigenT<QPhiXSpinorF, Eigen::MatrixXcf>(target, P, num_sites, block_sitelist, vec_idx);
     }
 
     void QPhiXSpinorToEigen(const QPhiXSpinor &target, Eigen::MatrixXcd &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx, const int &aggr) {
-        QPhiXSpinorToEigenT(target, P, num_sites, block_sitelist, vec_idx, aggr);
+        QPhiXSpinorToEigenT<QPhiXSpinor, Eigen::MatrixXcd>(target, P, num_sites, block_sitelist, vec_idx, aggr);
     }
 
-    void QPhiXSpinorToEigen(const QPhiXSpinorF &target, Eigen::MatrixXcd &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx, const int &aggr) {
-        QPhiXSpinorToEigenT(target, P, num_sites, block_sitelist, vec_idx, aggr);
+    void QPhiXSpinorToEigen(const QPhiXSpinorF &target, Eigen::MatrixXcf &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx, const int &aggr) {
+        QPhiXSpinorToEigenT<QPhiXSpinorF, Eigen::MatrixXcf>(target, P, num_sites, block_sitelist, vec_idx, aggr);
     }
 
 
-    template <typename QS>
-    inline void EigenToQPhixSpinorT(QS &target, const Eigen::MatrixXcd &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx){
+    template <typename QS, typename EigenT>
+    inline void EigenToQPhixSpinorT(QS &target, const EigenT &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx){
 
 	for (int site = 0; site < num_sites; ++site){
 	const CBSite &cbsite = block_sitelist[site];
@@ -403,8 +407,8 @@ namespace MG {
 
     }
 
-    template <typename QS>
-    inline void EigenToQPhixSpinorT(QS &target, const Eigen::MatrixXcd &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx, const int &aggr){
+    template <typename QS, typename EigenT>
+    inline void EigenToQPhixSpinorT(QS &target, const EigenT &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx, const int &aggr){
 
 	const int min_cspin = aggr == 0 ? 0 : 2;
 	const int max_cspin = aggr == 0 ? 2 : 4;
@@ -427,26 +431,27 @@ namespace MG {
 
 
     void EigenToQPhiXSpinor(QPhiXSpinor &target, const Eigen::MatrixXcd &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx) {
-        EigenToQPhixSpinorT(target, P, num_sites, block_sitelist, vec_idx);
+        EigenToQPhixSpinorT<QPhiXSpinor, Eigen::MatrixXcd>(target, P, num_sites, block_sitelist, vec_idx);
     }
 
-    void EigenToQPhiXSpinor(QPhiXSpinorF &target, const Eigen::MatrixXcd &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx) {
-        EigenToQPhixSpinorT(target, P, num_sites, block_sitelist, vec_idx);
+    void EigenToQPhiXSpinor(QPhiXSpinorF &target, const Eigen::MatrixXcf &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx) {
+        EigenToQPhixSpinorT<QPhiXSpinorF, Eigen::MatrixXcf>(target, P, num_sites, block_sitelist, vec_idx);
     }
 
     void EigenToQPhiXSpinor(QPhiXSpinor &target, const Eigen::MatrixXcd &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx, const int &aggr) {
-        EigenToQPhixSpinorT(target, P, num_sites, block_sitelist, vec_idx, aggr);
+        EigenToQPhixSpinorT<QPhiXSpinor, Eigen::MatrixXcd>(target, P, num_sites, block_sitelist, vec_idx, aggr);
     }
 
-    void EigenToQPhiXSpinor(QPhiXSpinorF &target, const Eigen::MatrixXcd &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx, const int &aggr) {
-        EigenToQPhixSpinorT(target, P, num_sites, block_sitelist, vec_idx, aggr);
+    void EigenToQPhiXSpinor(QPhiXSpinorF &target, const Eigen::MatrixXcf &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx, const int &aggr) {
+        EigenToQPhixSpinorT<QPhiXSpinorF, Eigen::MatrixXcf>(target, P, num_sites, block_sitelist, vec_idx, aggr);
     }
 
 
-    Eigen::MatrixXcd eigenLeastSquares(const Eigen::MatrixXcd &P, const Eigen::MatrixXcd &Pc, const Eigen::MatrixXcd &weights) {
+    template <typename EigenT>
+    EigenT eigenLeastSquares(const EigenT &P, const EigenT &Pc, const EigenT &weights) {
 
-	    Eigen::MatrixXcd Pk = P * (weights * Pc.adjoint());
-            Eigen::MatrixXcd Pj(Pc.rows(), Pc.rows());
+	    EigenT Pk = P * (weights * Pc.adjoint());
+            EigenT Pj(Pc.rows(), Pc.rows());
 	    Pj = Pc * (weights * Pc.adjoint());
 	    return Pk * Pj.inverse();
     }
@@ -454,7 +459,7 @@ namespace MG {
 
     //gather the vecs on the block, and do a least squares interpolation from the fine degrees of freedom to 
     //the coarse degrees of freedom (read: least squares minimization of all fine lattice vectors to right singular vectors
-    template <typename QS>
+    template <typename QS, typename EigenT>
     inline void leastSquaresInterpT(std::vector<std::shared_ptr<QS>> &vecs, const int &num_keep, const std::vector<Block> &block_list){
 
 	int num_blocks = block_list.size();
@@ -466,12 +471,12 @@ namespace MG {
 		auto block_sitelist = block.getCBSiteList();
 		int num_sites = block.getNumSites();
 
-		Eigen::MatrixXcd P(3*4*num_sites, num_vecs);
-		Eigen::MatrixXcd V(num_vecs,num_vecs);
-		Eigen::MatrixXcd weights = Eigen::MatrixXcd::Zero(num_vecs,num_vecs);
-		Eigen::MatrixXcd Pc(num_vecs, num_keep);
-		Eigen::MatrixXcd Pct(num_keep, num_vecs);
-		Eigen::MatrixXcd Pnew(3*4*num_sites, num_keep);
+		EigenT P(3*4*num_sites, num_vecs);
+		EigenT V(num_vecs,num_vecs);
+		EigenT weights = EigenT::Zero(num_vecs,num_vecs);
+		EigenT Pc(num_vecs, num_keep);
+		EigenT Pct(num_keep, num_vecs);
+		EigenT Pnew(3*4*num_sites, num_keep);
 
 		for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs); curr_vec++){
 		
@@ -480,7 +485,7 @@ namespace MG {
 		} //curr_vec
 
 	//do the svd
-	Eigen::JacobiSVD<Eigen::MatrixXcd> svd(P, Eigen::ComputeThinV);
+	Eigen::JacobiSVD<EigenT> svd(P, Eigen::ComputeThinV);
 
 	//U = svd.matrixU();
 	V = svd.matrixV();
@@ -529,16 +534,16 @@ namespace MG {
     } //func
 
     void leastSquaresInterp(std::vector<std::shared_ptr<QPhiXSpinor>> &vecs, const int &num_keep, const std::vector<Block> &block_list){
-	    leastSquaresInterpT(vecs, num_keep, block_list);
+	    leastSquaresInterpT<QPhiXSpinor, Eigen::MatrixXcd>(vecs, num_keep, block_list);
     }
 
     void leastSquaresInterp(std::vector<std::shared_ptr<QPhiXSpinorF>> &vecs, const int &num_keep, const std::vector<Block> &block_list){
-	    leastSquaresInterpT(vecs, num_keep, block_list);
+	    leastSquaresInterpT<QPhiXSpinorF, Eigen::MatrixXcf>(vecs, num_keep, block_list);
     }
 
     //gather the vecs belonging to each partition on the block
     //and do an svd on that partition
-    template <typename QS>
+    template <typename QS, typename EigenT>
     inline void partitionedSVDT(std::vector<std::shared_ptr<QS>> &vecs, const std::vector<Block> &block_list,
 		                              const int &num_part){
     int num_blocks = block_list.size();
@@ -553,14 +558,14 @@ namespace MG {
     const Block &block = block_list[block_id];
     auto block_sitelist = block.getCBSiteList();
     int num_sites = block.getNumSites();
-    Eigen::MatrixXcd P(3*4*num_sites, num_vecs);
+    EigenT P(3*4*num_sites, num_vecs);
 
 		    for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs); curr_vec++){
 			QPhiXSpinorToEigen(*(part_vecs[curr_vec]), P, num_sites, block_sitelist, static_cast<int>(curr_vec));
 
 		    } //curr_vec
 
-		    Eigen::JacobiSVD<Eigen::MatrixXcd> svd(P, Eigen::ComputeThinU);
+		    Eigen::JacobiSVD<EigenT> svd(P, Eigen::ComputeThinU);
 		    P = svd.matrixU();
 		    if (block_id == 0) {
 		    QDPIO::cout << "Singular values of block " << block_id << " on partition " << ipart << "  are :" << std::endl;
@@ -578,7 +583,7 @@ namespace MG {
 
     } //func
 
-    template <typename QS>
+    template <typename QS, typename EigenT>
     inline void partitionedChiralSVDT(std::vector<std::shared_ptr<QS>> &vecs, const std::vector<Block> &block_list,
                                               const int &num_part){
     int num_blocks = block_list.size();
@@ -593,8 +598,8 @@ namespace MG {
     const Block &block = block_list[block_id];
     auto block_sitelist = block.getCBSiteList();
     int num_sites = block.getNumSites();
-    Eigen::MatrixXcd Pp(6*num_sites, num_vecs);
-    Eigen::MatrixXcd Pm(6*num_sites, num_vecs);
+    EigenT Pp(6*num_sites, num_vecs);
+    EigenT Pm(6*num_sites, num_vecs);
 
                     for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs); curr_vec++){
                         QPhiXSpinorToEigen(*(part_vecs[curr_vec]), Pp, num_sites, block_sitelist, static_cast<int>(curr_vec), 0);
@@ -602,8 +607,8 @@ namespace MG {
 
                     } //curr_vec
 
-                    Eigen::JacobiSVD<Eigen::MatrixXcd> svdp(Pp, Eigen::ComputeThinU);
-		    Eigen::JacobiSVD<Eigen::MatrixXcd> svdm(Pm, Eigen::ComputeThinU);
+                    Eigen::JacobiSVD<EigenT> svdp(Pp, Eigen::ComputeThinU);
+		    Eigen::JacobiSVD<EigenT> svdm(Pm, Eigen::ComputeThinU);
                     Pp = svdp.matrixU();
 		    Pm = svdm.matrixU();
                     if (block_id == 0) {
@@ -629,23 +634,23 @@ namespace MG {
 
 
     void partitionedSVD(std::vector<std::shared_ptr<QPhiXSpinor>> &vecs, const std::vector<Block> &block_list, const int &num_part){
-	    partitionedSVDT(vecs, block_list, num_part);
+	    partitionedSVDT<QPhiXSpinor, Eigen::MatrixXcd>(vecs, block_list, num_part);
     }
 
     void partitionedSVD(std::vector<std::shared_ptr<QPhiXSpinorF>> &vecs, const std::vector<Block> &block_list, const int &num_part){
-	                partitionedSVDT(vecs, block_list, num_part);
+	                partitionedSVDT<QPhiXSpinorF, Eigen::MatrixXcf>(vecs, block_list, num_part);
     } 
 
     void partitionedChiralSVD(std::vector<std::shared_ptr<QPhiXSpinor>> &vecs, const std::vector<Block> &block_list, const int &num_part){
-            partitionedChiralSVDT(vecs, block_list, num_part);
+            partitionedChiralSVDT<QPhiXSpinor, Eigen::MatrixXcd>(vecs, block_list, num_part);
     }
 
     void partitionedChiralSVD(std::vector<std::shared_ptr<QPhiXSpinorF>> &vecs, const std::vector<Block> &block_list, const int &num_part){
-                        partitionedChiralSVDT(vecs, block_list, num_part);
+                        partitionedChiralSVDT<QPhiXSpinorF, Eigen::MatrixXcf>(vecs, block_list, num_part);
     }
 
     //gather the vecs on the block, and do an SVD of the block
-    template <typename QS>
+    template <typename QS, typename EigenT>
     inline void localSVDT(std::vector<std::shared_ptr<QS>> &vecs, const std::vector<Block> &block_list,
 			  const int &k_f){
 
@@ -657,7 +662,7 @@ namespace MG {
 		auto block_sitelist = block.getCBSiteList();
 		int num_sites = block.getNumSites();
 
-		Eigen::MatrixXcd P(3*4*num_sites, num_vecs);
+		EigenT P(3*4*num_sites, num_vecs);
 
 		for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs); curr_vec++){
 		
@@ -665,7 +670,7 @@ namespace MG {
 
 		} //curr_vec
 
-	Eigen::JacobiSVD<Eigen::MatrixXcd> svd(P, Eigen::ComputeThinU);
+	Eigen::JacobiSVD<EigenT> svd(P, Eigen::ComputeThinU);
 	//overwrite P with U
 	P = svd.matrixU();
 
@@ -690,7 +695,7 @@ namespace MG {
     }
 
     //gather the vecs on the block, and do an SVD of the block
-    template <typename QS>
+    template <typename QS, typename EigenT>
     inline void chiralSVDT(std::vector<std::shared_ptr<QS>> &vecs, const std::vector<Block> &block_list,
                           const int &k_f){
 
@@ -702,8 +707,8 @@ namespace MG {
                 auto block_sitelist = block.getCBSiteList();
                 int num_sites = block.getNumSites();
 
-                Eigen::MatrixXcd Pp(6*num_sites, num_vecs);
-		Eigen::MatrixXcd Pm(6*num_sites, num_vecs);
+                EigenT Pp(6*num_sites, num_vecs);
+		EigenT Pm(6*num_sites, num_vecs);
 
                 for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs); curr_vec++){
 
@@ -712,8 +717,8 @@ namespace MG {
 
                 } //curr_vec
 
-        Eigen::JacobiSVD<Eigen::MatrixXcd> svdp(Pp, Eigen::ComputeThinU);
-	Eigen::JacobiSVD<Eigen::MatrixXcd> svdm(Pm, Eigen::ComputeThinU);
+        Eigen::JacobiSVD<EigenT> svdp(Pp, Eigen::ComputeThinU);
+	Eigen::JacobiSVD<EigenT> svdm(Pm, Eigen::ComputeThinU);
         //overwrite P with U
         Pp = svdp.matrixU();
 	Pm = svdm.matrixU();
@@ -746,8 +751,8 @@ namespace MG {
     }
 
     //gather the vecs on the block, and do an SVD of the block
-    template <typename QS>
-    inline void streamingChiralSVDT(std::vector<std::shared_ptr<QS>> &vecs, const std::vector<Block> &block_list){
+    template <typename QS, typename EigenT>
+    inline void streamingChiralSVDT(std::vector<std::shared_ptr<QS>> &vecs, const std::vector<Block> &block_list, bool last_stream){
 
         int num_blocks = block_list.size();
         int num_vecs = vecs.size();
@@ -757,10 +762,10 @@ namespace MG {
                 auto block_sitelist = block.getCBSiteList();
                 int num_sites = block.getNumSites();
 
-                Eigen::MatrixXcd Pp(6*num_sites, num_vecs);
-                Eigen::MatrixXcd Pm(6*num_sites, num_vecs);
-		//Eigen::MatrixXcd sp = Eigen::MatrixXcd::Zero(num_vecs,num_vecs);
-		//Eigen::MatrixXcd sm = Eigen::MatrixXcd::Zero(num_vecs,num_vecs);
+                EigenT Pp(6*num_sites, num_vecs);
+                EigenT Pm(6*num_sites, num_vecs);
+		EigenT sp = EigenT::Zero(num_vecs,num_vecs);
+		EigenT sm = EigenT::Zero(num_vecs,num_vecs);
 
                 for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs); curr_vec++){
 
@@ -769,12 +774,22 @@ namespace MG {
 
                 } //curr_vec
 
-        Eigen::JacobiSVD<Eigen::MatrixXcd> svdp(Pp, Eigen::ComputeThinU);
-        Eigen::JacobiSVD<Eigen::MatrixXcd> svdm(Pm, Eigen::ComputeThinU);
-        //overwrite P with U
+        Eigen::JacobiSVD<EigenT> svdp(Pp, Eigen::ComputeThinU);
+        Eigen::JacobiSVD<EigenT> svdm(Pm, Eigen::ComputeThinU);
+
+        for (int i = 0; i < num_vecs; ++i){
+        sp(i,i) = svdp.singularValues()[i];
+        sm(i,i) = svdm.singularValues()[i];
+        }
+
+        //overwrite P with U*Sigma
+	if ( !last_stream ) {
+        Pp = svdp.matrixU() * sp;
+        Pm = svdm.matrixU() * sm;
+	} else {
         Pp = svdp.matrixU();
         Pm = svdm.matrixU();
-
+	}
         /*for (int i = 0; i < num_vecs; ++i){
         sp(i,i) = svdp.singularValues()[i];
 	sm(i,i) = svdm.singularValues()[i];
@@ -814,30 +829,30 @@ namespace MG {
 
     void localSVD(std::vector<std::shared_ptr<QPhiXSpinor>> &vecs, const std::vector<Block> &block_list,
 		  const int &k_f){
-  	localSVDT(vecs, block_list, k_f);
+  	localSVDT<QPhiXSpinor, Eigen::MatrixXcd>(vecs, block_list, k_f);
     }
 
     void localSVD(std::vector<std::shared_ptr<QPhiXSpinorF>> &vecs, const std::vector<Block> &block_list,
 		  const int &k_f){
-	localSVDT(vecs, block_list, k_f);
+	localSVDT<QPhiXSpinorF, Eigen::MatrixXcf>(vecs, block_list, k_f);
     }
 
     void chiralSVD(std::vector<std::shared_ptr<QPhiXSpinor>> &vecs, const std::vector<Block> &block_list,
                   const int &k_f){
-        chiralSVDT(vecs, block_list, k_f);
+        chiralSVDT<QPhiXSpinor, Eigen::MatrixXcd>(vecs, block_list, k_f);
     }
 
     void chiralSVD(std::vector<std::shared_ptr<QPhiXSpinorF>> &vecs, const std::vector<Block> &block_list,
                   const int &k_f){
-        chiralSVDT(vecs, block_list, k_f);
+        chiralSVDT<QPhiXSpinorF, Eigen::MatrixXcf>(vecs, block_list, k_f);
     }
 
-    void streamingChiralSVD(std::vector<std::shared_ptr<QPhiXSpinor>> &vecs, const std::vector<Block> &block_list){
-        streamingChiralSVDT(vecs, block_list);
+    void streamingChiralSVD(std::vector<std::shared_ptr<QPhiXSpinor>> &vecs, const std::vector<Block> &block_list, bool last_stream){
+        streamingChiralSVDT<QPhiXSpinor, Eigen::MatrixXcd>(vecs, block_list, last_stream);
     }
 
-    void streamingChiralSVD(std::vector<std::shared_ptr<QPhiXSpinorF>> &vecs, const std::vector<Block> &block_list){
-        streamingChiralSVDT(vecs, block_list);
+    void streamingChiralSVD(std::vector<std::shared_ptr<QPhiXSpinorF>> &vecs, const std::vector<Block> &block_list, bool last_stream){
+        streamingChiralSVDT<QPhiXSpinorF, Eigen::MatrixXcf>(vecs, block_list, last_stream);
     }
 
     //! 'Restrict' a QDP++ spinor to a CoarseSpinor with the same geometry

@@ -64,13 +64,14 @@ namespace MG {
         CreateBlockList(fine_level.blocklist, blocked_lattice_dims, blocked_lattice_orig,
                         fine_level.info->GetLatticeDimensions(), p.block_sizes[fine_level_id],
                         fine_level.info->GetLatticeOrigin());
+	
 
-        
+        num_vecs = p.n_vecs[fine_level_id];
 	for (int i = 0; i < p.n_streams[fine_level_id]; i++) {
 		
 		std::shared_ptr<CoarseSpinor> x;
 		//num_vecs = ( i == 0 ? p.n_vecs[fine_level_id] : p.n_vecs[fine_level_id] + p.n_vecs_keep[fine_level_id]);
-		num_vecs = ( i == 0 ? p.n_vecs[fine_level_id] : 2*p.n_vecs[fine_level_id]);
+		//num_vecs = ( i == 0 ? p.n_vecs[fine_level_id] : 2*p.n_vecs[fine_level_id]);
 
 		x = std::make_shared<CoarseSpinor>(fine_info, num_vecs);
 		Gaussian(*x);
@@ -92,16 +93,16 @@ namespace MG {
                         res[0].n_count);
 
 		int n_test_vecs = 0;
-		for (int k = ( i == 0 ? 0 : p.n_vecs[fine_level_id]); k < (i == 0 ? p.n_vecs[fine_level_id] : num_vecs); ++k) {
+		for (int k = ( i == 0 ? 0 : p.n_vecs[fine_level_id]); k < (i == 0 ? p.n_vecs[fine_level_id] : 2*num_vecs); ++k) {
             		CopyVec(*fine_level.null_vecs[k], 0, 1, *x, n_test_vecs, SUBSET_ALL);
 			n_test_vecs++;
         	}
 		
 		if ( i == 0 ) {
 		std::vector<std::shared_ptr<CoarseSpinor>> tmp(fine_level.null_vecs.begin(), fine_level.null_vecs.begin() + p.n_vecs[fine_level_id]);
-		streamingChiralSVD(tmp, fine_level.blocklist);
+		streamingChiralSVD(tmp, fine_level.blocklist, false);
 		} else {
-		streamingChiralSVD(fine_level.null_vecs, fine_level.blocklist);
+		streamingChiralSVD(fine_level.null_vecs, fine_level.blocklist, (i == p.n_streams[fine_level_id]-1 ? true : false));
 		}
 
 	} //n_streams

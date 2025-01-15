@@ -670,7 +670,7 @@ namespace MG {
 
     }
 
-    void streamingChiralSVD(std::vector<std::shared_ptr<CoarseSpinor>> &vecs, const std::vector<Block> &block_list){
+    void streamingChiralSVD(std::vector<std::shared_ptr<CoarseSpinor>> &vecs, const std::vector<Block> &block_list, bool last_stream){
 
         int num_blocks = block_list.size();
         int num_vecs = vecs.size();
@@ -687,8 +687,8 @@ namespace MG {
 
         Eigen::MatrixXcf Pp((dims.n/2) * num_sites, dims.m);
         Eigen::MatrixXcf Pm((dims.n/2) * num_sites, dims.m);
-	//Eigen::MatrixXcf sp = Eigen::MatrixXcf::Zero(dims.m, dims.m);
-	//Eigen::MatrixXcf sm = Eigen::MatrixXcf::Zero(dims.m, dims.m);
+	Eigen::MatrixXcf sp = Eigen::MatrixXcf::Zero(dims.m, dims.m);
+	Eigen::MatrixXcf sm = Eigen::MatrixXcf::Zero(dims.m, dims.m);
 
                 for (IndexType curr_vec = 0; curr_vec < static_cast<IndexType>(num_vecs); ++curr_vec){
 
@@ -701,15 +701,22 @@ namespace MG {
                 //the vectors on the blocks now in P, so do the svd, only need U
                 Eigen::JacobiSVD<Eigen::MatrixXcf> svdp(Pp, ComputeThinU);
                 Eigen::JacobiSVD<Eigen::MatrixXcf> svdm(Pm, ComputeThinU);
-                //overwrite P with U
-                Pp = svdp.matrixU();
-                Pm = svdm.matrixU();
 
-		//for (int i = 0; i < dims.m; i++) {
-		//	sp(i,i) = svdp.singularValues()[i];
-		//	sm(i,i) = svdm.singularValues()[i];
-		//}
+                for (int i = 0; i < dims.m; i++) {
+                        sp(i,i) = svdp.singularValues()[i];
+                        sm(i,i) = svdm.singularValues()[i];
+                }
+		
 
+                //overwrite P with U*Sigma
+		if ( !last_stream ) {
+                Pp = svdp.matrixU() * sp;
+                Pm = svdm.matrixU() * sm;
+		} else {
+		Pp = svdp.matrixU();
+		Pm = svdm.matrixU();
+		}
+		
 		//Pp = Pp * sp;
 		//Pm = Pm * sm;
 

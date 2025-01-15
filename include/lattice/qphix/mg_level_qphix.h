@@ -201,9 +201,9 @@ namespace MG {
 	//call the chiral svd. Commented out the resize in in chiralSVDT so that all of the right singular vectors are kept
 	if ( i == 0 ) {
 	std::vector<std::shared_ptr<SpinorT>> tmp(fine_level.null_vecs.begin(), fine_level.null_vecs.begin() + p.n_vecs[0]);
-	streamingChiralSVD(tmp, fine_level.blocklist);
+	streamingChiralSVD(tmp, fine_level.blocklist, false);
 	} else {
-	streamingChiralSVD(fine_level.null_vecs, fine_level.blocklist);
+	streamingChiralSVD(fine_level.null_vecs, fine_level.blocklist, (i == p.n_streams[0]-1 ? true : false));
 	}
 	
 	} //n_streams for loop
@@ -293,11 +293,16 @@ namespace MG {
 
         // Orthonormalize the vectors -- I heard once that for GS stability is improved
         // if you do it twice.
-        MasterLog(INFO, "MG Level 0: Block Orthogonalizing Aggregates");
+	
+        //MasterLog(INFO, "MG Level 0: Block Orthogonalizing Aggregates");
 
-        orthonormalizeBlockAggregates(fine_level.null_vecs, fine_level.blocklist);
+        //orthonormalizeBlockAggregates(fine_level.null_vecs, fine_level.blocklist);
 
-        orthonormalizeBlockAggregates(fine_level.null_vecs, fine_level.blocklist);
+	//MasterLog(INFO, "MG Level 0: Block Orthogonalizing Aggregates");
+
+        //orthonormalizeBlockAggregates(fine_level.null_vecs, fine_level.blocklist);
+	
+	
 	}
 
 	//now have a different number of near null vectors (potentially) so change

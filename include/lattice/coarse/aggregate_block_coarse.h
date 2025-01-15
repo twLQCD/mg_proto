@@ -61,7 +61,7 @@ namespace MG {
                   const std::vector<Block> &block_list, const int &k_c);
 
     void streamingChiralSVD(std::vector<std::shared_ptr<CoarseSpinor>> &vecs,
-                  const std::vector<Block> &block_list);
+                  const std::vector<Block> &block_list, bool last_stream);
 
    void partitionedChiralSVD(std::vector<std::shared_ptr<CoarseSpinor>> &vecs,
                   const std::vector<Block> &block_list, const int &num_part);
