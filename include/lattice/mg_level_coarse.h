@@ -95,6 +95,13 @@ namespace MG {
 		int n_test_vecs = 0;
 		for (int k = ( i == 0 ? 0 : p.n_vecs[fine_level_id]); k < (i == 0 ? p.n_vecs[fine_level_id] : 2*num_vecs); ++k) {
             		CopyVec(*fine_level.null_vecs[k], 0, 1, *x, n_test_vecs, SUBSET_ALL);
+			double norm2_cb0 = sqrt(Norm2Vec(*(fine_level.null_vecs[k]), SUBSET_EVEN)[0]);
+                        double norm2_cb1 = sqrt(Norm2Vec(*(fine_level.null_vecs[k]), SUBSET_ODD)[0]);
+			MasterLog(
+                        INFO,
+                        "Coarse Level: BiCGStab Solver Took: %d iterations: || v_e ||=%16.8e || v_o "
+                        "||=%16.8e",
+                        res[0].n_count, norm2_cb0, norm2_cb1);
 			n_test_vecs++;
         	}
 		
@@ -194,6 +201,13 @@ namespace MG {
         for (int k = 0; k < num_vecs; ++k) {
             fine_level.null_vecs[k] = std::make_shared<CoarseSpinor>(fine_info);
             CopyVec(*fine_level.null_vecs[k], 0, 1, *x, k, SUBSET_ALL);
+	    double norm2_cb0 = sqrt(Norm2Vec(*(fine_level.null_vecs[k]), SUBSET_EVEN)[0]);
+            double norm2_cb1 = sqrt(Norm2Vec(*(fine_level.null_vecs[k]), SUBSET_ODD)[0]);
+            MasterLog(
+            INFO,
+            "Coarse Level: || v_e ||=%16.8e || v_o "
+            "||=%16.8e",
+            norm2_cb0, norm2_cb1);
         }
 
         IndexArray blocked_lattice_dims;
@@ -225,7 +239,8 @@ namespace MG {
 	leastSquaresInterp(fine_level.null_vecs, p.n_vecs_keep[fine_level_id], fine_level.blocklist);
         orthonormalizeBlockAggregates(fine_level.null_vecs, fine_level.blocklist);
         orthonormalizeBlockAggregates(fine_level.null_vecs, fine_level.blocklist);
-	} else {
+	} 
+	if (!p.do_psvd[fine_level_id] && !p.do_lsvd[fine_level_id] && !p.do_lsq[fine_level_id]) { //should be the default
 
         // Orthonormalize the vectors -- I heard once that for GS stability is improved
         // if you do it twice.

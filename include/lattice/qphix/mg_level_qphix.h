@@ -289,18 +289,19 @@ namespace MG {
 	leastSquaresInterp(fine_level.null_vecs, p.n_vecs_keep[0], fine_level.blocklist);
         orthonormalizeBlockAggregates(fine_level.null_vecs, fine_level.blocklist);
         orthonormalizeBlockAggregates(fine_level.null_vecs, fine_level.blocklist);
-	} else {
+	} 
+	if (!p.do_psvd[0] && !p.do_lsq[0] && !p.do_lsvd[0]) { //should be the default
 
         // Orthonormalize the vectors -- I heard once that for GS stability is improved
         // if you do it twice.
 	
-        //MasterLog(INFO, "MG Level 0: Block Orthogonalizing Aggregates");
+        MasterLog(INFO, "MG Level 0: Block Orthogonalizing Aggregates");
 
-        //orthonormalizeBlockAggregates(fine_level.null_vecs, fine_level.blocklist);
+        orthonormalizeBlockAggregates(fine_level.null_vecs, fine_level.blocklist);
 
 	//MasterLog(INFO, "MG Level 0: Block Orthogonalizing Aggregates");
 
-        //orthonormalizeBlockAggregates(fine_level.null_vecs, fine_level.blocklist);
+        orthonormalizeBlockAggregates(fine_level.null_vecs, fine_level.blocklist);
 	
 	
 	}
