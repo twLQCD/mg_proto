@@ -337,14 +337,14 @@ namespace MG {
     }
 
 
-    template <typename QS, typename EigenT>
+    template <typename QS, typename EigenT, typename T>
     inline void QPhiXSpinorToEigenT(const QS &src, EigenT &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx) {
 	for (int site = 0; site < num_sites; ++site){
 	const CBSite &cbsite = block_sitelist[site];
 #pragma omp parallel for collapse(2)
 		for (int spin = 0; spin < 4; ++spin) {
 			for (int color = 0; color < 3; ++color) {
-			 P(color + 3*spin + 3*4*site, vec_idx) = std::complex<double>(src(0, cbsite.cb, cbsite.site, spin, color, RE), src(0, cbsite.cb, cbsite.site, spin, color, IM));
+			 P(color + 3*spin + 3*4*site, vec_idx) = std::complex<T>(src(0, cbsite.cb, cbsite.site, spin, color, RE), src(0, cbsite.cb, cbsite.site, spin, color, IM));
 			}
 		}
 	}
@@ -352,7 +352,7 @@ namespace MG {
 
      }
 
-    template <typename QS, typename EigenT>
+    template <typename QS, typename EigenT, typename T>
     inline void QPhiXSpinorToEigenT(const QS &src, EigenT &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx, const int &aggr) {
 	const int min_cspin = aggr == 0 ? 0 : 2;
 	const int max_cspin = aggr == 0 ? 2 : 4;
@@ -364,7 +364,7 @@ namespace MG {
 			//int aux_spin = spin == 0 || spin == 2 ? 0 : 1
                         for (int color = 0; color < 3; ++color) {
 			 int aux_spin = (spin == 0 || spin == 2) ? 0 : 1;
-                         P(color + 3*aux_spin + 6*site, vec_idx) = std::complex<double>(src(0, cbsite.cb, cbsite.site, spin, color, RE), src(0, cbsite.cb, cbsite.site, spin, color, IM));
+                         P(color + 3*aux_spin + 6*site, vec_idx) = std::complex<T>(src(0, cbsite.cb, cbsite.site, spin, color, RE), src(0, cbsite.cb, cbsite.site, spin, color, IM));
 			//count++;
                         }
                 }
@@ -375,19 +375,19 @@ namespace MG {
 
 
     void QPhiXSpinorToEigen(const QPhiXSpinor &target, Eigen::MatrixXcd &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx) {
-	QPhiXSpinorToEigenT<QPhiXSpinor, Eigen::MatrixXcd>(target, P, num_sites, block_sitelist, vec_idx);
+	QPhiXSpinorToEigenT<QPhiXSpinor, Eigen::MatrixXcd, double>(target, P, num_sites, block_sitelist, vec_idx);
     }
 
     void QPhiXSpinorToEigen(const QPhiXSpinorF &target, Eigen::MatrixXcf &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx) {
-        QPhiXSpinorToEigenT<QPhiXSpinorF, Eigen::MatrixXcf>(target, P, num_sites, block_sitelist, vec_idx);
+        QPhiXSpinorToEigenT<QPhiXSpinorF, Eigen::MatrixXcf, float>(target, P, num_sites, block_sitelist, vec_idx);
     }
 
     void QPhiXSpinorToEigen(const QPhiXSpinor &target, Eigen::MatrixXcd &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx, const int &aggr) {
-        QPhiXSpinorToEigenT<QPhiXSpinor, Eigen::MatrixXcd>(target, P, num_sites, block_sitelist, vec_idx, aggr);
+        QPhiXSpinorToEigenT<QPhiXSpinor, Eigen::MatrixXcd, double>(target, P, num_sites, block_sitelist, vec_idx, aggr);
     }
 
     void QPhiXSpinorToEigen(const QPhiXSpinorF &target, Eigen::MatrixXcf &P, const int &num_sites, const std::vector<CBSite> &block_sitelist, const int &vec_idx, const int &aggr) {
-        QPhiXSpinorToEigenT<QPhiXSpinorF, Eigen::MatrixXcf>(target, P, num_sites, block_sitelist, vec_idx, aggr);
+        QPhiXSpinorToEigenT<QPhiXSpinorF, Eigen::MatrixXcf, float>(target, P, num_sites, block_sitelist, vec_idx, aggr);
     }
 
 
