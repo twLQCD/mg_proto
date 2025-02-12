@@ -46,7 +46,7 @@ namespace MG {
     template <typename CoarseLevelT>
     void SetupCoarseToCoarseStreamingSVDT(const SetupParams &p, const typename CoarseLevelT::LinOp &M_fine,
                               int fine_level_id, CoarseLevelT &fine_level,
-                              CoarseLevelT &coarse_level) {
+                              CoarseLevelT &coarse_level, bool do_shift) {
         // Info should already be created
 
         // Null solver is BiCGStab. Let us make a parameter struct for it.
@@ -65,6 +65,7 @@ namespace MG {
                         fine_level.info->GetLatticeDimensions(), p.block_sizes[fine_level_id],
                         fine_level.info->GetLatticeOrigin());
 	
+	if (params.RsdTarget > 0) {
 
         num_vecs = p.n_vecs[fine_level_id];
 	for (int i = 0; i < p.n_streams[fine_level_id]; i++) {
@@ -114,6 +115,23 @@ namespace MG {
 
 	} //n_streams
 
+        } else {
+	    std::shared_ptr<CoarseSpinor> x;
+	    num_vecs = p.n_vecs[fine_level_id];
+            params.RsdTarget = fabs(params.RsdTarget);
+            fine_level.null_solver =
+                std::make_shared<typename CoarseLevelT::Solver>(M_fine, params);
+            std::vector<float> vals;
+            EigsParams eigs_params;
+            eigs_params.MaxIter = 0;
+            eigs_params.MaxNumEvals = num_vecs;
+            eigs_params.RsdTarget = params.RsdTarget;
+            eigs_params.VerboseP = true;
+            computeDeflation(fine_info, *fine_level.null_solver, eigs_params, x, vals);
+            if (p.purpose == SetupParams::INVERT) { ScaleVec(vals, *x); }
+        }
+
+
 	M_fine.clear();
 
 	fine_level.null_vecs.resize(p.n_vecs_keep[fine_level_id]);
@@ -129,7 +147,12 @@ namespace MG {
 
         coarse_level.gauge = std::make_shared<CoarseGauge>(*(coarse_level.info));
 
-        M_fine.generateCoarse(fine_level.blocklist, fine_level.null_vecs, *(coarse_level.gauge));
+	if (do_shift) {
+	MasterLog(INFO, "Shifting the coarse operator");
+        M_fine.generateCoarse(fine_level.blocklist, fine_level.null_vecs, *(coarse_level.gauge), 1e-6);
+	} else {
+	M_fine.generateCoarse(fine_level.blocklist, fine_level.null_vecs, *(coarse_level.gauge), 0.0);
+	}
 
         coarse_level.M = std::make_shared<const typename CoarseLevelT::LinOp>(coarse_level.gauge);
 
@@ -261,7 +284,7 @@ namespace MG {
 
         coarse_level.gauge = std::make_shared<CoarseGauge>(*(coarse_level.info));
 
-        M_fine.generateCoarse(fine_level.blocklist, fine_level.null_vecs, *(coarse_level.gauge));
+        M_fine.generateCoarse(fine_level.blocklist, fine_level.null_vecs, *(coarse_level.gauge), 0.0);
 
         coarse_level.M = std::make_shared<const typename CoarseLevelT::LinOp>(coarse_level.gauge);
 
@@ -294,12 +317,12 @@ namespace MG {
     void SetupCoarseToCoarseStreamingSVD(const SetupParams &p,
                              std::shared_ptr<const CoarseWilsonCloverLinearOperator> M_fine,
                              int fine_level_id, MGLevelCoarse &fine_level,
-                             MGLevelCoarse &coarse_level);
+                             MGLevelCoarse &coarse_level, bool do_shift);
 
     void SetupCoarseToCoarseStreamingSVD(const SetupParams &p,
                              std::shared_ptr<const CoarseEOWilsonCloverLinearOperator> M_fine,
                              int fine_level_id, MGLevelCoarseEO &fine_level,
-                             MGLevelCoarseEO &coarse_level);
+                             MGLevelCoarseEO &coarse_level, bool do_shift);
 
     void ModifyCoarseOp(MGLevelCoarse &coarse_level);
 

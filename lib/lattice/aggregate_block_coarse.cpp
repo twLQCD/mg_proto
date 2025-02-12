@@ -1434,9 +1434,9 @@ namespace MG {
     // Invert the diagonal part of u, into eo_clov
     using ComplexMatrix = Matrix<std::complex<float>, Dynamic, Dynamic, ColMajor>;
 
-    void invertCloverDiag(CoarseGauge &u) {
+    void invertCloverDiag(CoarseGauge &u, float sigma) {
         MasterLog(INFO, "Inverting Coarse Diagonal Term");
-
+	std::complex<float> c_sigma(sigma, 0.0);
         const LatticeInfo &info = u.GetInfo();
         const int num_cbsites = info.GetNumCBSites();
         const int num_colorspins = info.GetNumColorSpins();
@@ -1449,8 +1449,12 @@ namespace MG {
                 float *diag_site_data = u.GetSiteDiagDataPtr(cb, cbsite);
                 float *invdiag_site_data = u.GetSiteInvDiagDataPtr(cb, cbsite);
 
+		//iterate i to num_colorspins and add the shift
                 Map<ComplexMatrix> in_mat(reinterpret_cast<std::complex<float> *>(diag_site_data),
                                           num_colorspins, num_colorspins);
+		for (int i = 0; i < num_colorspins; i++) {
+		in_mat(i,i) += c_sigma;
+		}
                 Map<ComplexMatrix> out_mat(
                     reinterpret_cast<std::complex<float> *>(invdiag_site_data), num_colorspins,
                     num_colorspins);
@@ -1459,6 +1463,8 @@ namespace MG {
             } // sites
         }     // checkerboards
     }
+
+
 
     // Multiply the inverse part of the clover into eo_clov
     void multInvClovOffDiagLeft(CoarseGauge &u) {

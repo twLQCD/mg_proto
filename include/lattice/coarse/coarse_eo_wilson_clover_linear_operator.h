@@ -168,7 +168,7 @@ namespace MG {
 
         void generateCoarse(const std::vector<Block> &blocklist,
                             const std::vector<std::shared_ptr<CoarseSpinor>> in_vecs,
-                            CoarseGauge &u_coarse) const {
+                            CoarseGauge &u_coarse, float sigma) const {
             // Generate the triple products directly into the u_coarse
             ZeroGauge(u_coarse);
             for (int mu = 0; mu < 8; ++mu) {
@@ -181,8 +181,9 @@ namespace MG {
             MasterLog(INFO, "CoarseEOCloverLinearOperator: Clover Triple Product");
             clovTripleProduct(_the_op, blocklist, (*_u), in_vecs, u_coarse);
 
+	    //Here is where we would apply a shift
             MasterLog(INFO, "CoarseEOCloverLinearOperator: Inverting Diagonal (A) Links");
-            invertCloverDiag(u_coarse);
+            invertCloverDiag(u_coarse, sigma);
 
             MasterLog(INFO, "CoarseEOCloverLinearOperator: Computing A^{-1} D Links");
             multInvClovOffDiagLeft(u_coarse);

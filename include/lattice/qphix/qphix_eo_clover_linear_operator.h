@@ -413,7 +413,7 @@ namespace MG {
             clovTripleProduct(*this, blocklist, in_vecs, u_coarse);
 
             MasterLog(INFO, "QPhiXWilsonCloverEOLinearOperator: Inverting Diagonal (A) Links");
-            invertCloverDiag(u_coarse);
+            invertCloverDiag(u_coarse, 0.0);
 
             MasterLog(INFO, "QPhiXWilsonCloverEOLinearOperator: Computing A^{-1} D Links");
             multInvClovOffDiagLeft(u_coarse);

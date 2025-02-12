@@ -89,7 +89,7 @@ namespace MG {
                            CoarseGauge &coarse_clov);
 
     // Invert the diagonal part of u, into eo_clov
-    void invertCloverDiag(CoarseGauge &u);
+    void invertCloverDiag(CoarseGauge &u, float sigma);
 
     // Multiply the inverse part of the clover into eo_clov
     void multInvClovOffDiagLeft(CoarseGauge &u);

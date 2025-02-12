@@ -53,7 +53,7 @@ namespace MG {
 
         void generateCoarse(const std::vector<Block> &blocklist,
                             const std::vector<std::shared_ptr<CoarseSpinor>> in_vecs,
-                            CoarseGauge &u_coarse) const {
+                            CoarseGauge &u_coarse, float sigma) const {
             // Generate the triple products directly into the u_coarse
             ZeroGauge(u_coarse);
             for (int mu = 0; mu < 8; ++mu) {
@@ -66,7 +66,7 @@ namespace MG {
             clovTripleProduct(_the_op, blocklist, (*_u), in_vecs, u_coarse);
 
             MasterLog(INFO, "CoarseCloverLinearOperator: Inverting Diagonal (A) Links");
-            invertCloverDiag(u_coarse);
+            invertCloverDiag(u_coarse, sigma);
 
             MasterLog(INFO, "CoarseCloverLinearOperator: Computing A^{-1} D Links");
             multInvClovOffDiagLeft(u_coarse);

@@ -26,15 +26,15 @@ namespace MG {
     void SetupCoarseToCoarseStreamingSVD(const SetupParams &p,
                              std::shared_ptr<const CoarseWilsonCloverLinearOperator> M_fine,
                              int fine_level_id, MGLevelCoarse &fine_level,
-                             MGLevelCoarse &coarse_level) {
-        SetupCoarseToCoarseStreamingSVDT<>(p, *M_fine, fine_level_id, fine_level, coarse_level);
+                             MGLevelCoarse &coarse_level, bool do_shift) {
+        SetupCoarseToCoarseStreamingSVDT<>(p, *M_fine, fine_level_id, fine_level, coarse_level, do_shift);
     }
 
     void SetupCoarseToCoarseStreamingSVD(const SetupParams &p,
                              std::shared_ptr<const CoarseEOWilsonCloverLinearOperator> M_fine,
                              int fine_level_id, MGLevelCoarseEO &fine_level,
-                             MGLevelCoarseEO &coarse_level) {
-        SetupCoarseToCoarseStreamingSVDT<>(p, *M_fine, fine_level_id, fine_level, coarse_level);
+                             MGLevelCoarseEO &coarse_level, bool do_shift) {
+        SetupCoarseToCoarseStreamingSVDT<>(p, *M_fine, fine_level_id, fine_level, coarse_level, do_shift);
     }
 
     void ModifyCoarseOp(MGLevelCoarse &coarse_level) {

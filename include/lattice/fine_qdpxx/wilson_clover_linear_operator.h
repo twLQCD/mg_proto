@@ -179,7 +179,7 @@ namespace MG {
             clovTripleProductQDPXX(blocklist, _clov, in_vecs, u_coarse);
 
             MasterLog(INFO, "QDPWilsonCloverLinearOperator: Inverting Diagonal (A) Links");
-            invertCloverDiag(u_coarse);
+            invertCloverDiag(u_coarse, 0.0);
 
             MasterLog(INFO, "QDPWilsonCloverLinearOperator: Computing A^{-1} D Links");
             multInvClovOffDiagLeft(u_coarse);

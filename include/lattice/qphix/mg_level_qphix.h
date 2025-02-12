@@ -377,9 +377,15 @@ namespace MG {
 
             MasterLog(INFO, "Setup Level %d and %d", coarse_level, coarse_level + 1);
 	    if (p.n_streams[coarse_level] != 0) {
+		    if (coarse_level == n_coarse_levels-1) {
 	    SetupCoarseToCoarseStreamingSVD(p, mg_levels.coarse_levels[coarse_level - 1].M, coarse_level,
                                 mg_levels.coarse_levels[coarse_level - 1],
-                                mg_levels.coarse_levels[coarse_level]);
+                                mg_levels.coarse_levels[coarse_level], true);
+	    	   } else {
+			    SetupCoarseToCoarseStreamingSVD(p, mg_levels.coarse_levels[coarse_level - 1].M, coarse_level,
+                                mg_levels.coarse_levels[coarse_level - 1],
+                                mg_levels.coarse_levels[coarse_level], false);
+		  }
 	    } else {
 	                SetupCoarseToCoarse(p, mg_levels.coarse_levels[coarse_level - 1].M, coarse_level,
                                 mg_levels.coarse_levels[coarse_level - 1],
